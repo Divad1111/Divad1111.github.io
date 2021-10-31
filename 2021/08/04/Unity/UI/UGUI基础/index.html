@@ -50,16 +50,16 @@
   };
 </script>
 
-  <meta name="description" content="Canvas的渲染 渲染基本层次 基本渲染层次是根据可视化对象在继承窗口中的显示顺序来渲染的，在此有两种方式可以调节对象的顺序，第一种：直接在继承窗口拖拽。第二种：通过Transform的SetAsFirstSibling, SetAsLastSibling, and SetSiblingIndex函数来进行调节。 ## 渲染模式 - 屏幕覆盖模式 直接屏幕映射方式显示，永远在屏幕的最上面，跟相机">
+  <meta name="description" content="Canvas的渲染 渲染基本层次 基本渲染层次是根据可视化对象在继承窗口中的显示顺序来渲染的，在此有两种方式可以调节对象的顺序。第一种：直接在继承窗口拖拽。第二种：通过Transform的SetAsFirstSibling, SetAsLastSibling, and SetSiblingIndex函数来进行调节。 渲染模式  屏幕覆盖模式  直接屏幕映射方式显示，永远在屏幕的最上面，跟相机无关即">
 <meta property="og:type" content="article">
 <meta property="og:title" content="UGUI基础">
 <meta property="og:url" content="http://yoursite.com/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/index.html">
 <meta property="og:site_name" content="张卫的博客">
-<meta property="og:description" content="Canvas的渲染 渲染基本层次 基本渲染层次是根据可视化对象在继承窗口中的显示顺序来渲染的，在此有两种方式可以调节对象的顺序，第一种：直接在继承窗口拖拽。第二种：通过Transform的SetAsFirstSibling, SetAsLastSibling, and SetSiblingIndex函数来进行调节。 ## 渲染模式 - 屏幕覆盖模式 直接屏幕映射方式显示，永远在屏幕的最上面，跟相机">
+<meta property="og:description" content="Canvas的渲染 渲染基本层次 基本渲染层次是根据可视化对象在继承窗口中的显示顺序来渲染的，在此有两种方式可以调节对象的顺序。第一种：直接在继承窗口拖拽。第二种：通过Transform的SetAsFirstSibling, SetAsLastSibling, and SetSiblingIndex函数来进行调节。 渲染模式  屏幕覆盖模式  直接屏幕映射方式显示，永远在屏幕的最上面，跟相机无关即">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://img-blog.csdnimg.cn/img_convert/82530bf82c813a1a1062fb4bb7b4dace.png">
 <meta property="article:published_time" content="2021-08-04T09:52:28.000Z">
-<meta property="article:modified_time" content="2021-08-04T14:31:15.971Z">
+<meta property="article:modified_time" content="2021-10-31T01:54:52.999Z">
 <meta property="article:author" content="张卫">
 <meta property="article:tag" content="UI">
 <meta name="twitter:card" content="summary">
@@ -216,10 +216,16 @@
                 <i class="fa fa-calendar-o"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
-              
 
-              <time title="创建时间：2021-08-04 17:52:28 / 修改时间：22:31:15" itemprop="dateCreated datePublished" datetime="2021-08-04T17:52:28+08:00">2021-08-04</time>
+              <time title="创建时间：2021-08-04 17:52:28" itemprop="dateCreated datePublished" datetime="2021-08-04T17:52:28+08:00">2021-08-04</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-10-31 09:54:52" itemprop="dateModified" datetime="2021-10-31T09:54:52+08:00">2021-10-31</time>
+              </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
                 <i class="fa fa-folder-o"></i>
@@ -245,35 +251,92 @@
       
         <h1 id="canvas的渲染">Canvas的渲染</h1>
 <h2 id="渲染基本层次">渲染基本层次</h2>
-<p>基本渲染层次是根据可视化对象在继承窗口中的显示顺序来渲染的，在此有两种方式可以调节对象的顺序，第一种：直接在继承窗口拖拽。第二种：通过Transform的SetAsFirstSibling, SetAsLastSibling, and SetSiblingIndex函数来进行调节。 ## 渲染模式 - <strong>屏幕覆盖模式</strong> 直接屏幕映射方式显示，永远在屏幕的最上面，跟相机无关即使没有相机也可以显示 - <strong>屏幕相机模式</strong> 此模式和屏幕模式相似但是受到相机的限制，但是始终都显示在相机的前面，如果有3D物体在UI的前面也是会挡住UI。 - <strong>世界模式</strong> 把Canvas当成普通的对象在世界坐标系中定位渲染。</p>
+<p>基本渲染层次是根据可视化对象在继承窗口中的显示顺序来渲染的，在此有两种方式可以调节对象的顺序。第一种：直接在继承窗口拖拽。第二种：通过Transform的SetAsFirstSibling, SetAsLastSibling, and SetSiblingIndex函数来进行调节。</p>
+<h2 id="渲染模式">渲染模式</h2>
+<ul>
+<li><strong>屏幕覆盖模式</strong></li>
+</ul>
+<p>直接屏幕映射方式显示，永远在屏幕的最上面，跟相机无关即使没有相机也可以显示</p>
+<ul>
+<li><strong>屏幕相机模式</strong></li>
+</ul>
+<p>此模式和屏幕模式相似但是受到相机的限制，但是始终都显示在相机的前面，如果有3D物体在UI的前面也是会挡住UI。</p>
+<ul>
+<li><strong>世界模式</strong></li>
+</ul>
+<p>把Canvas当成普通的对象在世界坐标系中定位渲染。</p>
 <a id="more"></a>
 <h1 id="canvas的屏幕适配策略">Canvas的屏幕适配策略</h1>
-<p>UGUI中的屏幕适配只需要在Canvas下挂一个CanvasScaler组件就行了。 适配模式分为3种： - <strong>固定像素</strong> 忽略屏幕的大小根据UI元素的实际像素显示 - <strong>根据屏幕大小进行缩放（也是最常用的一项）</strong> 此项会根据设备真实分辨率与设计分辨率来对Canvas进行缩放。有三种模式： 1.Match Width or Height 根据宽或者高来对Canvas进行缩放，比如设备分辨率为1920x900，设计分辨率为1280x720，此时，如果采用宽进行匹配那么可以通过公式计算出此时应该缩放多少倍，公式如下： 缩放因子：1920/1280 = 1.5 缩放后的Canvas的宽为：1920（刚好能够完全显示） 缩放后的Canvas的高为：720x1.5 = 1080 由于设备的高为900所以会导致高度上的一部分不会被显示出来 2.Expand 适配的计算公式同上，只是在此模式下会保证设计分辨率下的东西能够全部显示出来，及选择设备分辨率和设计分辨率的宽、高比中选择最小值作为缩放因子。 3.Shrink 和Expand恰好相反，在此模式下不会留黑边但是会导致显示不完全。及选择设备分辨率和设计分辨率的宽、高比中选择最大值作为缩放因子。 - <strong>固定物理大小</strong> 忽略屏幕大小和分辨率根据UI的实际物理大小来显示。</p>
+<p>UGUI中的屏幕适配只需要在Canvas下挂一个CanvasScaler组件就行了。 适配模式分为3种：</p>
+<ul>
+<li><strong>固定像素</strong></li>
+</ul>
+<p>忽略屏幕的大小根据UI元素的实际像素显示</p>
+<ul>
+<li><strong>根据屏幕大小进行缩放（也是最常用的一项）</strong></li>
+</ul>
+<p>此项会根据设备真实分辨率与设计分辨率来对Canvas进行缩放。有三种模式： 1.Match Width or Height 根据宽或者高来对Canvas进行缩放，比如设备分辨率为1920x900，设计分辨率为1280x720，此时，如果采用宽进行匹配那么可以通过公式计算出此时应该缩放多少倍，公式如下： 缩放因子：1920/1280 = 1.5 缩放后的Canvas的宽为：1920（刚好能够完全显示） 缩放后的Canvas的高为：720x1.5 = 1080 由于设备的高为900所以会导致高度上的一部分不会被显示出来 2.Expand 适配的计算公式同上，只是在此模式下会保证设计分辨率下的东西能够全部显示出来，及选择设备分辨率和设计分辨率的宽、高比中选择最小值作为缩放因子。 3.Shrink 和Expand恰好相反，在此模式下不会留黑边但是会导致显示不完全。及选择设备分辨率和设计分辨率的宽、高比中选择最大值作为缩放因子。</p>
+<ul>
+<li><strong>固定物理大小</strong></li>
+</ul>
+<p>忽略屏幕大小和分辨率根据UI的实际物理大小来显示。</p>
 <h1 id="可视化对象">可视化对象</h1>
 <ul>
-<li><strong>Text</strong> 同NGUI的Label.富文本格式参见：<a href="http://docs.unity3d.com/Manual/StyledText.html" target="_blank" rel="noopener">http://docs.unity3d.com/Manual/StyledText.html</a></li>
-<li><strong>Image</strong> 同NGUI的Sprite</li>
-<li><strong>RawImage</strong> 同NGUI的Texture</li>
-<li><strong>Mask</strong> 此可视化组件是不可见的，只是用于定义一个子对象的显示区域不能超过父对象的显示区域，超出部分将被剪切掉。同NGUI Panel的剪切功能。在Unity5.3里有两个Mask组件 1.Mask 2.RectMask2D</li>
-<li><strong>Effects</strong> 1.Shadow 2.Outline 3.PositionAsUI1(未知功能)</li>
+<li><strong>Text</strong></li>
 </ul>
+<p>同NGUI的Label.富文本格式参见：<a href="http://docs.unity3d.com/Manual/StyledText.html" target="_blank" rel="noopener">http://docs.unity3d.com/Manual/StyledText.html</a></p>
+<ul>
+<li><strong>Image</strong></li>
+</ul>
+<p>同NGUI的Sprite</p>
+<ul>
+<li><strong>RawImage</strong></li>
+</ul>
+<p>同NGUI的Texture</p>
+<ul>
+<li><strong>Mask</strong></li>
+</ul>
+<p>此可视化组件是不可见的，只是用于定义一个子对象的显示区域不能超过父对象的显示区域，超出部分将被剪切掉。同NGUI Panel的剪切功能。在Unity5.3里有两个Mask组件 1.Mask 2.RectMask2D</p>
+<ul>
+<li><strong>Effects</strong></li>
+</ul>
+<p>1.Shadow 2.Outline 3.PositionAsUI1(未知功能)</p>
 <h1 id="布局系统">布局系统</h1>
 <h2 id="基础布局">基础布局</h2>
 <h3 id="rect-tool">Rect Tool</h3>
-<p>选中此工具后，我们就可以在场景视图中编辑它的大小，位置，缩放，轴心点和锚点。 Toolbar buttons with Rect Tool selected ### Rect Transform 功能同Rect Tool只是此组件是需要自己手动输入参数。 #### Pivot(轴心点) 旋转，大小和缩放的修改都依赖于Pivo的位置。当ToolTar设置了Pivot时，Rect Transform的Pivot能够在场景中被移动。 Toolbar buttons set to Pivot and Local #### Anchors 有两种情况，在每种情况下Rect Transform显示是不同的如下： 1.四个锚点都在一起的情况 在此种状态可视化组件可以根据屏幕的任意位置来定进行定位，大小不会根据屏幕的大小的改变而调整。</p>
+<p>选中此工具后，我们就可以在场景视图中编辑它的大小，位置，缩放，轴心点和锚点。 Toolbar buttons with Rect Tool selected</p>
+<h3 id="rect-transform">Rect Transform</h3>
+<p>功能同Rect Tool只是此组件是需要自己手动输入参数。</p>
+<h4 id="pivot轴心点">Pivot(轴心点)</h4>
+<p>旋转，大小和缩放的修改都依赖于Pivo的位置。当ToolTar设置了Pivot时，Rect Transform的Pivot能够在场景中被移动。 Toolbar buttons set to Pivot and Local</p>
+<h4 id="anchors">Anchors</h4>
+<p>有两种情况，在每种情况下Rect Transform显示是不同的如下： 1.四个锚点都在一起的情况 在此种状态可视化组件可以根据屏幕的任意位置来定进行定位，大小不会根据屏幕的大小的改变而调整。</p>
 <p>2.四个锚点分开的情况 在此种状态下可视化组件的大小会根据屏幕的大小改变而调整可视化组件的大小。下图中Left,Right,Top和Bottom表示与这四个锚点构成的矩形的边的距离。</p>
 <p>更详细的说明参见官方文档：<a href="http://docs.unity3d.com/Manual/UIBasicLayout.html" target="_blank" rel="noopener">http://docs.unity3d.com/Manual/UIBasicLayout.html</a></p>
 <h2 id="自动布局">自动布局</h2>
-<p>自动布局系统依赖于基础布局系统。自动布局系统有两部分组成：布局元素和布局控制器。 ### 布局元素 布局元素定义了如下尺寸：</p>
+<p>自动布局系统依赖于基础布局系统。自动布局系统有两部分组成：布局元素和布局控制器。</p>
+<h3 id="布局元素">布局元素</h3>
+<p>布局元素定义了如下尺寸：</p>
 <ul>
 <li>Minimum width</li>
 <li>Minimum height</li>
 <li>Preferred width</li>
 <li>Preferred height</li>
 <li>Flexible width</li>
-<li>Flexible height 可以通过ILayoutElement接口查看他们的定义： <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">public interface ILayoutElement</span><br><span class="line">    &#123;</span><br><span class="line">        float flexibleHeight &#123; get; &#125;</span><br><span class="line">        float flexibleWidth &#123; get; &#125;</span><br><span class="line">        int layoutPriority &#123; get; &#125;</span><br><span class="line">        float minHeight &#123; get; &#125;</span><br><span class="line">        float minWidth &#123; get; &#125;</span><br><span class="line">        float preferredHeight &#123; get; &#125;</span><br><span class="line">        float preferredWidth &#123; get; &#125;</span><br><span class="line">        void CalculateLayoutInputHorizontal();</span><br><span class="line">        void CalculateLayoutInputVertical();</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure></li>
+<li>Flexible height</li>
 </ul>
-<p>每个可视化对象都继承了ILayoutElement来控制自己的大小。当然也可以通过LayoutElement组件去重写这些属性。 ### 布局控制器 布局控制器是根据布局元素定义的大小属性来确定自己或子对象的大小和位置的。 布局控制器有两种类型的控制器：控制自己和控制子对象 <strong>控制自己</strong> ContentSizeFitter:内容填充 Aspect Ratio Fitter：比例控制 <strong>控制子对象</strong> Horizontal Layout Group：让子对象水平排布 Vertical Layout Group：让子对象垂直排布 Grid Layout Group：让子对象按网格排布 ### 局控计算顺序 1.计算自己的宽（子在父之前计算），通过调用ILayoutElement的CalculateLayoutInputHorizontal 2.控制器计算宽，通过调用ILayoutController的SetLayoutHorizontal 3.计算自己的高（子在父之前计算）， 通过调用ILayoutElement 的CalculateLayoutInputVertical 4.控制器计算高，通过调用ILayoutController的SetLayoutVertical ### 布局控重建触发时机 通过调用LayoutRebuilder.MarkLayoutForRebuild后在下一帧进行重建。</p>
+<p>可以通过ILayoutElement接口查看他们的定义： <figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title">ILayoutElement</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">float</span> flexibleHeight &#123; <span class="keyword">get</span>; &#125;</span><br><span class="line">        <span class="keyword">float</span> flexibleWidth &#123; <span class="keyword">get</span>; &#125;</span><br><span class="line">        <span class="keyword">int</span> layoutPriority &#123; <span class="keyword">get</span>; &#125;</span><br><span class="line">        <span class="keyword">float</span> minHeight &#123; <span class="keyword">get</span>; &#125;</span><br><span class="line">        <span class="keyword">float</span> minWidth &#123; <span class="keyword">get</span>; &#125;</span><br><span class="line">        <span class="keyword">float</span> preferredHeight &#123; <span class="keyword">get</span>; &#125;</span><br><span class="line">        <span class="keyword">float</span> preferredWidth &#123; <span class="keyword">get</span>; &#125;</span><br><span class="line">        <span class="function"><span class="keyword">void</span> <span class="title">CalculateLayoutInputHorizontal</span>(<span class="params"></span>)</span>;</span><br><span class="line">        <span class="function"><span class="keyword">void</span> <span class="title">CalculateLayoutInputVertical</span>(<span class="params"></span>)</span>;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure></p>
+<p>每个可视化对象都继承了ILayoutElement来控制自己的大小。当然也可以通过LayoutElement组件去重写这些属性。</p>
+<h3 id="布局控制器">布局控制器</h3>
+<p>布局控制器是根据布局元素定义的大小属性来确定自己或子对象的大小和位置的。 布局控制器有两种类型的控制器：控制自己和控制子对象</p>
+<p><strong>控制自己</strong></p>
+<p>ContentSizeFitter:内容填充 Aspect Ratio Fitter：比例控制</p>
+<p><strong>控制子对象</strong></p>
+<p>Horizontal Layout Group：让子对象水平排布 Vertical Layout Group：让子对象垂直排布 Grid Layout Group：让子对象按网格排布</p>
+<h3 id="局控计算顺序">局控计算顺序</h3>
+<p>1.计算自己的宽（子在父之前计算），通过调用ILayoutElement的CalculateLayoutInputHorizontal 2.控制器计算宽，通过调用ILayoutController的SetLayoutHorizontal 3.计算自己的高（子在父之前计算）， 通过调用ILayoutElement 的CalculateLayoutInputVertical 4.控制器计算高，通过调用ILayoutController的SetLayoutVertical</p>
+<h3 id="布局控重建触发时机">布局控重建触发时机</h3>
+<p>通过调用LayoutRebuilder.MarkLayoutForRebuild后在下一帧进行重建。</p>
 <ul>
 <li>在设置了能够改变布局属性的时候</li>
 <li>在一下回调被调用的时候</li>
@@ -284,8 +347,26 @@
 <li>OnDidApplyAnimationProperties</li>
 </ul>
 <h1 id="交互式组件">交互式组件</h1>
-<p>交互式组件是用于处理鼠标，键盘，Touches和控制器的交互的组件，此组件是不可见的必须与一个或多个可视化组件一起使用。 交互式组件的公共功能能被放在了Selectable中，其中包括了交互组件的状态（normal, highlighted, pressed, disabled）切换，以及交换式组件的导航。 ### Button 按钮组件，通过OnClick来相应单击事件。 ### Toggle Toggle是一个复选框，OnValueChanged监听它的值改变。 ### Toggle Group Toggle Group是一个单选框 ### Slider 滑动器控件 ### Scrollbar 滚动条控件，通常联合Scroll Rect 和 Mask制作滚动视图。 ### Input Field 输入字段控件 ### Scroll Rect 同NGUI的ScrollView.需要配合Mask一起制作。</p>
-<p>注意：一般在一个对象上不会挂两个交互式组件。 # 事件系统 事件系统是一中发送输入信息（比如像鼠标，键盘和Touches等的事件）到对象上的一种方法。 在事件系统中包括了两个主要模块： ## 输入模块 输入模块决定了事件系统的将有怎么样的行为。主要作用如下：</p>
+<p>交互式组件是用于处理鼠标，键盘，Touches和控制器的交互的组件，此组件是不可见的必须与一个或多个可视化组件一起使用。 交互式组件的公共功能能被放在了Selectable中，其中包括了交互组件的状态（normal, highlighted, pressed, disabled）切换，以及交换式组件的导航。</p>
+<h3 id="button">Button</h3>
+<p>按钮组件，通过OnClick来相应单击事件。</p>
+<h3 id="toggle">Toggle</h3>
+<p>Toggle是一个复选框，OnValueChanged监听它的值改变。</p>
+<h3 id="toggle-group">Toggle Group</h3>
+<p>Toggle Group是一个单选框</p>
+<h3 id="slider">Slider</h3>
+<p>滑动器控件</p>
+<h3 id="scrollbar">Scrollbar</h3>
+<p>滚动条控件，通常联合Scroll Rect 和 Mask制作滚动视图。</p>
+<h3 id="input-field">Input Field</h3>
+<p>输入字段控件</p>
+<h3 id="scroll-rect">Scroll Rect</h3>
+<p>同NGUI的ScrollView.需要配合Mask一起制作。</p>
+<p>注意：一般在一个对象上不会挂两个交互式组件。</p>
+<h1 id="事件系统">事件系统</h1>
+<p>事件系统是一中发送输入信息（比如像鼠标，键盘和Touches等的事件）到对象上的一种方法。 在事件系统中包括了两个主要模块：</p>
+<h2 id="输入模块">输入模块</h2>
+<p>输入模块决定了事件系统的将有怎么样的行为。主要作用如下：</p>
 <ul>
 <li>处理输入</li>
 <li>管理事件状态</li>
@@ -297,7 +378,14 @@
 <ul>
 <li>Graphic Raycaster 用于UI</li>
 <li>Physics 2D Raycaster 用于2D 物理元素</li>
-<li>Physics Raycaster 用于3D物理元素 ## 扩展自定义消息 从IEventSystemHandler借口派生一个接口出来就定义了一个消息 <figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title">ICustomMessageTarget</span> : <span class="title">IEventSystemHandler</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// functions that can be called via the messaging system</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">Message1</span>(<span class="params"></span>)</span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">Message2</span>(<span class="params"></span>)</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure> 通过ExecuteEvents类可以发送一个消息，此类是消息的的帮助类，可以查看，验证一个对象上的消息接口。 <figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ExecuteEvents.Execute&lt;ICustomMessageTarget&gt;(target, <span class="literal">null</span>, (x,y)=&gt;x.Message1());</span><br></pre></td></tr></table></figure> ## 支持的事件</li>
+<li>Physics Raycaster 用于3D物理元素</li>
+</ul>
+<h2 id="扩展自定义消息">扩展自定义消息</h2>
+<p>从IEventSystemHandler借口派生一个接口出来就定义了一个消息 <figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title">ICustomMessageTarget</span> : <span class="title">IEventSystemHandler</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// functions that can be called via the messaging system</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">Message1</span>(<span class="params"></span>)</span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">Message2</span>(<span class="params"></span>)</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>通过ExecuteEvents类可以发送一个消息，此类是消息的的帮助类，可以查看，验证一个对象上的消息接口。</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ExecuteEvents.Execute&lt;ICustomMessageTarget&gt;(target, <span class="literal">null</span>, (x,y)=&gt;x.Message1());</span><br></pre></td></tr></table></figure>
+<h2 id="支持的事件">支持的事件</h2>
+<ul>
 <li>IPointerEnterHandler - OnPointerEnter - Called when a pointer enters the object</li>
 <li>IPointerExitHandler - OnPointerExit - Called when a pointer exits the object</li>
 <li>IPointerDownHandler - OnPointerDown - Called when a pointer is pressed on the object</li>
@@ -389,7 +477,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#canvas的渲染"><span class="nav-number">1.</span> <span class="nav-text">Canvas的渲染</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#渲染基本层次"><span class="nav-number">1.1.</span> <span class="nav-text">渲染基本层次</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#canvas的屏幕适配策略"><span class="nav-number">2.</span> <span class="nav-text">Canvas的屏幕适配策略</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#可视化对象"><span class="nav-number">3.</span> <span class="nav-text">可视化对象</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#布局系统"><span class="nav-number">4.</span> <span class="nav-text">布局系统</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#基础布局"><span class="nav-number">4.1.</span> <span class="nav-text">基础布局</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#rect-tool"><span class="nav-number">4.1.1.</span> <span class="nav-text">Rect Tool</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#自动布局"><span class="nav-number">4.2.</span> <span class="nav-text">自动布局</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#交互式组件"><span class="nav-number">5.</span> <span class="nav-text">交互式组件</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#raycasters射线器"><span class="nav-number">5.1.</span> <span class="nav-text">Raycasters（射线器）</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文献"><span class="nav-number">6.</span> <span class="nav-text">参考文献</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#附录-组成结构图"><span class="nav-number">7.</span> <span class="nav-text">附录-组成结构图</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#canvas的渲染"><span class="nav-number">1.</span> <span class="nav-text">Canvas的渲染</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#渲染基本层次"><span class="nav-number">1.1.</span> <span class="nav-text">渲染基本层次</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#渲染模式"><span class="nav-number">1.2.</span> <span class="nav-text">渲染模式</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#canvas的屏幕适配策略"><span class="nav-number">2.</span> <span class="nav-text">Canvas的屏幕适配策略</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#可视化对象"><span class="nav-number">3.</span> <span class="nav-text">可视化对象</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#布局系统"><span class="nav-number">4.</span> <span class="nav-text">布局系统</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#基础布局"><span class="nav-number">4.1.</span> <span class="nav-text">基础布局</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#rect-tool"><span class="nav-number">4.1.1.</span> <span class="nav-text">Rect Tool</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#rect-transform"><span class="nav-number">4.1.2.</span> <span class="nav-text">Rect Transform</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#pivot轴心点"><span class="nav-number">4.1.2.1.</span> <span class="nav-text">Pivot(轴心点)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#anchors"><span class="nav-number">4.1.2.2.</span> <span class="nav-text">Anchors</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#自动布局"><span class="nav-number">4.2.</span> <span class="nav-text">自动布局</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#布局元素"><span class="nav-number">4.2.1.</span> <span class="nav-text">布局元素</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#布局控制器"><span class="nav-number">4.2.2.</span> <span class="nav-text">布局控制器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#局控计算顺序"><span class="nav-number">4.2.3.</span> <span class="nav-text">局控计算顺序</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#布局控重建触发时机"><span class="nav-number">4.2.4.</span> <span class="nav-text">布局控重建触发时机</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#交互式组件"><span class="nav-number">5.</span> <span class="nav-text">交互式组件</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#button"><span class="nav-number">5.0.1.</span> <span class="nav-text">Button</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#toggle"><span class="nav-number">5.0.2.</span> <span class="nav-text">Toggle</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#toggle-group"><span class="nav-number">5.0.3.</span> <span class="nav-text">Toggle Group</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#slider"><span class="nav-number">5.0.4.</span> <span class="nav-text">Slider</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#scrollbar"><span class="nav-number">5.0.5.</span> <span class="nav-text">Scrollbar</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#input-field"><span class="nav-number">5.0.6.</span> <span class="nav-text">Input Field</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#scroll-rect"><span class="nav-number">5.0.7.</span> <span class="nav-text">Scroll Rect</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#事件系统"><span class="nav-number">6.</span> <span class="nav-text">事件系统</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#输入模块"><span class="nav-number">6.1.</span> <span class="nav-text">输入模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#raycasters射线器"><span class="nav-number">6.2.</span> <span class="nav-text">Raycasters（射线器）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#扩展自定义消息"><span class="nav-number">6.3.</span> <span class="nav-text">扩展自定义消息</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#支持的事件"><span class="nav-number">6.4.</span> <span class="nav-text">支持的事件</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文献"><span class="nav-number">7.</span> <span class="nav-text">参考文献</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#附录-组成结构图"><span class="nav-number">8.</span> <span class="nav-text">附录-组成结构图</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
