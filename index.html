@@ -401,7 +401,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/11/05/Unity/Graphics/Unity%E6%B8%B2%E6%9F%93%E7%AE%A1%E7%BA%BF%E4%BB%8B%E7%BB%8D/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpg">
@@ -415,7 +415,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/" class="post-title-link" itemprop="url">UGUI基础</a>
+            <a href="/2021/11/05/Unity/Graphics/Unity%E6%B8%B2%E6%9F%93%E7%AE%A1%E7%BA%BF%E4%BB%8B%E7%BB%8D/" class="post-title-link" itemprop="url">Unity渲染管线介绍</a>
         </h1>
 
         <div class="post-meta">
@@ -425,14 +425,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-08-04 17:52:28" itemprop="dateCreated datePublished" datetime="2021-08-04T17:52:28+08:00">2021-08-04</time>
+              <time title="创建时间：2021-11-05 12:20:02" itemprop="dateCreated datePublished" datetime="2021-11-05T12:20:02+08:00">2021-11-05</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-10-31 09:54:52" itemprop="dateModified" datetime="2021-10-31T09:54:52+08:00">2021-10-31</time>
+                <time title="修改时间：2022-05-16 22:08:15" itemprop="dateModified" datetime="2022-05-16T22:08:15+08:00">2022-05-16</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -457,25 +457,23 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="canvas的渲染">Canvas的渲染</h1>
-<h2 id="渲染基本层次">渲染基本层次</h2>
-<p>基本渲染层次是根据可视化对象在继承窗口中的显示顺序来渲染的，在此有两种方式可以调节对象的顺序。第一种：直接在继承窗口拖拽。第二种：通过Transform的SetAsFirstSibling, SetAsLastSibling, and SetSiblingIndex函数来进行调节。</p>
-<h2 id="渲染模式">渲染模式</h2>
+          <h1 id="什么渲染管线">什么渲染管线</h1>
+<p>渲染管线跟工厂的流水线一样，工厂的流水线为了生成最终的一个产品，每个流水线的工人只干一件特定的事情，最后将一个产品完成。计算机的图形渲染管线和工厂的流水线一样，只是图形渲染管线最终生成的是一张二维图片。 我们将一个渲染流程分成3个阶段：<strong>应用阶段</strong>、<strong>几何阶段</strong>、<strong>光栅化阶段</strong>。注意这仅仅是概念性阶段，每个阶段本身通常也是一个流水线系统，即包含了子流水线阶段。如下图： <img src="https://divad1111.github.io/images/shader/pflow.png" alt="渲染流水线三个概念图" /></p>
 <ul>
-<li><strong>屏幕覆盖模式</strong></li>
+<li><strong>应用阶段</strong> 从名字我们可以看出，这个阶段是由我们的应用主导的，因此通常由CPU负责实现。换句话说，我们这些开发者具有这个阶段的绝对控制权。 在这阶段中，开发者有3个主要任务：</li>
 </ul>
-<p>直接屏幕映射方式显示，永远在屏幕的最上面，跟相机无关即使没有相机也可以显示</p>
+<ol type="1">
+<li>我们要准备好场景数据，例如摄像机的位置、视椎体、场景中包含了哪些模型、使用了哪些光源等等；</li>
+<li>为了渲染性能，我们往往需要做一个粗粒度剔除（culling）工作,以把哪些不可见的物体踢出去，这样就不需要再移交给几何阶段进行处理；</li>
+<li>最后我们要设置好每个模型的渲染状态，这些渲染状态包括但不限于它们使用的材质（漫反射颜色、高光反色颜色）、使用的纹理、使用的Shader等。 这一阶段最重要的输出是渲染所需的几何信息，即<strong>渲染图元（rendering primitives）</strong>。通俗来讲，渲染图元可以是点、线、三角面等。这些渲染图元将会被传递给下一个阶段——几何阶段。</li>
+</ol>
 <ul>
-<li><strong>屏幕相机模式</strong></li>
+<li><p><strong>几何阶段</strong> 几何阶段用于处理所有和我们要绘制的几何相关的事情。例如，决定需要绘制的图元是什么，怎么绘制它们，在哪里绘制它们。这一阶段通常在GPU上进行。 几何阶段负责和每个渲染图元打交道，进行逐顶点、逐多边形的操作。这个阶段可以进一步分成更小的流水阶段，这在下一章中会讲到。<strong>几何阶段的一个重要任务就是把顶点坐标变换到屏幕空间中，再交给光栅器进行处理。通过对输入的渲染图元进行多步处理后，</strong>这一阶段将会输出屏幕空间的二维顶点坐标、每个顶点对应的深度值，着色相等相关信息**，并传递给下一个阶段。</p></li>
+<li><p><strong>光栅化阶段</strong> 这一阶段将会使用上个阶段传递的数据来生成屏幕上的像素，并渲染出最终的图像。这个阶段也是在GPU上运行。光栅化的任务主要是决定每个渲染图元中的哪些像素应该被绘制在屏幕上。<strong>它需要对上一个阶段得到的逐顶点数据（例如纹理坐标，顶点颜色等）进行插值</strong>，然后在进行逐像素处理。和上一个阶段相似，光栅化阶段也可以分成更小的流水线阶段。</p></li>
 </ul>
-<p>此模式和屏幕模式相似但是受到相机的限制，但是始终都显示在相机的前面，如果有3D物体在UI的前面也是会挡住UI。</p>
-<ul>
-<li><strong>世界模式</strong></li>
-</ul>
-<p>把Canvas当成普通的对象在世界坐标系中定位渲染。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/#more" rel="contents">
+              <a class="btn" href="/2021/11/05/Unity/Graphics/Unity%E6%B8%B2%E6%9F%93%E7%AE%A1%E7%BA%BF%E4%BB%8B%E7%BB%8D/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -575,6 +573,104 @@
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/2021/08/04/Unity/UI/UGUI%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/" class="post-title-link" itemprop="url">UGUI基础</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-08-04 17:52:28" itemprop="dateCreated datePublished" datetime="2021-08-04T17:52:28+08:00">2021-08-04</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-10-31 09:54:52" itemprop="dateModified" datetime="2021-10-31T09:54:52+08:00">2021-10-31</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Unity/" itemprop="url" rel="index">
+                    <span itemprop="name">Unity</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="canvas的渲染">Canvas的渲染</h1>
+<h2 id="渲染基本层次">渲染基本层次</h2>
+<p>基本渲染层次是根据可视化对象在继承窗口中的显示顺序来渲染的，在此有两种方式可以调节对象的顺序。第一种：直接在继承窗口拖拽。第二种：通过Transform的SetAsFirstSibling, SetAsLastSibling, and SetSiblingIndex函数来进行调节。</p>
+<h2 id="渲染模式">渲染模式</h2>
+<ul>
+<li><strong>屏幕覆盖模式</strong></li>
+</ul>
+<p>直接屏幕映射方式显示，永远在屏幕的最上面，跟相机无关即使没有相机也可以显示</p>
+<ul>
+<li><strong>屏幕相机模式</strong></li>
+</ul>
+<p>此模式和屏幕模式相似但是受到相机的限制，但是始终都显示在相机的前面，如果有3D物体在UI的前面也是会挡住UI。</p>
+<ul>
+<li><strong>世界模式</strong></li>
+</ul>
+<p>把Canvas当成普通的对象在世界坐标系中定位渲染。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1025,96 +1121,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/03/04/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/CSharp/%E8%81%8A%E8%81%8A.Net%E5%BC%80%E5%8F%91%E5%B9%B3%E5%8F%B0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpg">
-      <meta itemprop="name" content="张卫">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="张卫的博客">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/03/04/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/CSharp/%E8%81%8A%E8%81%8A.Net%E5%BC%80%E5%8F%91%E5%B9%B3%E5%8F%B0/" class="post-title-link" itemprop="url">聊聊.Net开发平台</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-03-04 17:30:21" itemprop="dateCreated datePublished" datetime="2021-03-04T17:30:21+08:00">2021-03-04</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-04-10 18:19:02" itemprop="dateModified" datetime="2022-04-10T18:19:02+08:00">2022-04-10</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/" itemprop="url" rel="index">
-                    <span itemprop="name">编程语言</span>
-                  </a>
-                </span>
-                  ，
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/C/" itemprop="url" rel="index">
-                    <span itemprop="name">C#</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="介绍">介绍</h1>
-<p>.Net是什么呢？.Net是1998年微软剑桥研究院的技术人员研究的下一代开发技术，并将其制定的规范(CLI)提交到了ECMA，形成了<a href="https://www.ecma-international.org/publications-and-standards/standards/ecma-335/" target="_blank" rel="noopener">ECMA335</a>规范, 随后被ISO采纳为国际标准<a href="https://www.iso.org/standard/58046.html" target="_blank" rel="noopener">ISO/IEC 23271:2012</a>。到2002微软正式发布了.NET Framework 1.0。.NET Framework是.Net开发技术规范的第一个实现，所以在初期.Net和.Net Framework指的是同一个东西，但它们本质上是完全不同的。由于当时只有微软的.Net Framework实现了.Net标准所以也仅限于Windows开发栈。.Net Framework平台的内容包含很多组件和库，像WinForm, WebForm, WPF，Asp.net等。直到2004年Mono让其可以在Linux上运行了，慢慢的Mono也开始支持Android, iOS，MacOSx让.Net实现跨平台。
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/03/04/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/CSharp/%E8%81%8A%E8%81%8A.Net%E5%BC%80%E5%8F%91%E5%B9%B3%E5%8F%B0/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1165,7 +1171,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">22</span>
+          <span class="site-state-item-count">23</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1178,7 +1184,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-count">13</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -1238,13 +1244,13 @@
       <i class="fa fa-area-chart"></i>
     </span>
       <span class="post-meta-item-text">站点总字数：</span>
-    <span title="站点总字数">140k</span>
+    <span title="站点总字数">170k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">2:08</span>
+    <span title="站点阅读时长">2:34</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.1
   </div>
