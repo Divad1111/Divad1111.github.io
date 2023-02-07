@@ -50,12 +50,12 @@
   };
 </script>
 
-  <meta name="description" content="什么渲染管线 渲染管线跟工厂的流水线一样，工厂的流水线为了生成最终的一个产品，每个流水线的工人只干一件特定的事情，最后将一个产品完成。计算机的图形渲染管线和工厂的流水线一样，只是图形渲染管线最终生成的是一张二维图片。 我们将一个渲染流程分成3个阶段：应用阶段、几何阶段、光栅化阶段。注意这仅仅是概念性阶段，每个阶段本身通常也是一个流水线系统，即包含了子流水线阶段。如下图：   应用阶段 从名字我们可">
+  <meta name="description" content="什么渲染管线 渲染管线跟工厂的流水线一样，工厂的流水线为了生成最终的一个产品，每个流水线的工人只干一件特定的事情，最后将一个产品完成。计算机的图形渲染管线和工厂的流水线一样，只是图形渲染管线最终生成的是一张二维图片。 我们将一个渲染流程分成3个阶段：应用阶段、几何阶段、光栅化阶段。注意这仅仅是概念性阶段，每个阶段本身通常也是一个流水线系统，即包含了子流水线阶段。如下图：   应用阶段  从名字我们">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Unity渲染管线介绍">
 <meta property="og:url" content="http://yoursite.com/2021/11/05/Unity/Graphics/Unity%E6%B8%B2%E6%9F%93%E7%AE%A1%E7%BA%BF%E4%BB%8B%E7%BB%8D/index.html">
 <meta property="og:site_name" content="张卫的博客">
-<meta property="og:description" content="什么渲染管线 渲染管线跟工厂的流水线一样，工厂的流水线为了生成最终的一个产品，每个流水线的工人只干一件特定的事情，最后将一个产品完成。计算机的图形渲染管线和工厂的流水线一样，只是图形渲染管线最终生成的是一张二维图片。 我们将一个渲染流程分成3个阶段：应用阶段、几何阶段、光栅化阶段。注意这仅仅是概念性阶段，每个阶段本身通常也是一个流水线系统，即包含了子流水线阶段。如下图：   应用阶段 从名字我们可">
+<meta property="og:description" content="什么渲染管线 渲染管线跟工厂的流水线一样，工厂的流水线为了生成最终的一个产品，每个流水线的工人只干一件特定的事情，最后将一个产品完成。计算机的图形渲染管线和工厂的流水线一样，只是图形渲染管线最终生成的是一张二维图片。 我们将一个渲染流程分成3个阶段：应用阶段、几何阶段、光栅化阶段。注意这仅仅是概念性阶段，每个阶段本身通常也是一个流水线系统，即包含了子流水线阶段。如下图：   应用阶段  从名字我们">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://divad1111.github.io/images/shader/pflow.png">
 <meta property="og:image" content="http://yoursite.com/images/unity/graphics/rendering_path_comp.png">
@@ -66,7 +66,7 @@
 <meta property="og:image" content="http://yoursite.com/images/unity/graphics/introduction_phase1.png">
 <meta property="og:image" content="http://yoursite.com/images/unity/graphics/introduction_phase2.png">
 <meta property="article:published_time" content="2021-11-05T04:20:02.000Z">
-<meta property="article:modified_time" content="2022-07-04T14:05:41.094Z">
+<meta property="article:modified_time" content="2023-02-07T23:43:02.902Z">
 <meta property="article:author" content="张卫">
 <meta property="article:tag" content="Rendering">
 <meta name="twitter:card" content="summary">
@@ -231,7 +231,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-07-04 22:05:41" itemprop="dateModified" datetime="2022-07-04T22:05:41+08:00">2022-07-04</time>
+                <time title="修改时间：2023-02-08 07:43:02" itemprop="dateModified" datetime="2023-02-08T07:43:02+08:00">2023-02-08</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -259,22 +259,33 @@
         <h1 id="什么渲染管线">什么渲染管线</h1>
 <p>渲染管线跟工厂的流水线一样，工厂的流水线为了生成最终的一个产品，每个流水线的工人只干一件特定的事情，最后将一个产品完成。计算机的图形渲染管线和工厂的流水线一样，只是图形渲染管线最终生成的是一张二维图片。 我们将一个渲染流程分成3个阶段：<strong>应用阶段</strong>、<strong>几何阶段</strong>、<strong>光栅化阶段</strong>。注意这仅仅是概念性阶段，每个阶段本身通常也是一个流水线系统，即包含了子流水线阶段。如下图： <img src="https://divad1111.github.io/images/shader/pflow.png" alt="渲染流水线三个概念图" /></p>
 <ul>
-<li><strong>应用阶段</strong> 从名字我们可以看出，这个阶段是由我们的应用主导的，因此通常由CPU负责实现。换句话说，我们这些开发者具有这个阶段的绝对控制权。 在这阶段中，开发者有3个主要任务：</li>
+<li><strong>应用阶段</strong></li>
 </ul>
-<ol type="1">
-<li>我们要准备好场景数据，例如摄像机的位置、视椎体、场景中包含了哪些模型、使用了哪些光源等等；</li>
-<li>为了渲染性能，我们往往需要做一个粗粒度剔除（culling）工作,以把哪些不可见的物体踢出去，这样就不需要再移交给几何阶段进行处理；</li>
-<li>最后我们要设置好每个模型的渲染状态，这些渲染状态包括但不限于它们使用的材质（漫反射颜色、高光反色颜色）、使用的纹理、使用的Shader等。 这一阶段最重要的输出是渲染所需的几何信息，即<strong>渲染图元（rendering primitives）</strong>。通俗来讲，渲染图元可以是点、线、三角面等。这些渲染图元将会被传递给下一个阶段——几何阶段。</li>
-</ol>
+<p>从名字我们可以看出，这个阶段是由我们的应用主导的，因此通常由CPU负责实现。换句话说，我们这些开发者具有这个阶段的绝对控制权。 在这阶段中，开发者有3个主要任务： 1. 我们要准备好场景数据，例如摄像机的位置、视椎体、场景中包含了哪些模型、使用了哪些光源等等； 2. 为了渲染性能，我们往往需要做一个粗粒度剔除（culling）工作,以把哪些不可见的物体踢出去，这样就不需要再移交给几何阶段进行处理； 3. 最后我们要设置好每个模型的渲染状态，这些渲染状态包括但不限于它们使用的材质（漫反射颜色、高光反色颜色）、使用的纹理、使用的Shader等。 这一阶段最重要的输出是渲染所需的几何信息，即<strong>渲染图元（rendering primitives）</strong>。通俗来讲，渲染图元可以是点、线、三角面等。这些渲染图元将会被传递给下一个阶段——几何阶段。</p>
 <ul>
-<li><p><strong>几何阶段</strong> 几何阶段用于处理所有和我们要绘制的几何相关的事情。例如，决定需要绘制的图元是什么，怎么绘制它们，在哪里绘制它们。这一阶段通常在GPU上进行。 几何阶段负责和每个渲染图元打交道，进行逐顶点、逐多边形的操作。这个阶段可以进一步分成更小的流水阶段，这在下一章中会讲到。<strong>几何阶段的一个重要任务就是把顶点坐标变换到屏幕空间中，再交给光栅器进行处理。通过对输入的渲染图元进行多步处理后，</strong>这一阶段将会输出屏幕空间的二维顶点坐标、每个顶点对应的深度值，着色相等相关信息**，并传递给下一个阶段。</p></li>
-<li><p><strong>光栅化阶段</strong> 这一阶段将会使用上个阶段传递的数据来生成屏幕上的像素，并渲染出最终的图像。这个阶段也是在GPU上运行。光栅化的任务主要是决定每个渲染图元中的哪些像素应该被绘制在屏幕上。<strong>它需要对上一个阶段得到的逐顶点数据（例如纹理坐标，顶点颜色等）进行插值</strong>，然后在进行逐像素处理。和上一个阶段相似，光栅化阶段也可以分成更小的流水线阶段。</p></li>
+<li><strong>几何阶段</strong></li>
 </ul>
+<p>几何阶段用于处理所有和我们要绘制的几何相关的事情。例如，决定需要绘制的图元是什么，怎么绘制它们，在哪里绘制它们。这一阶段通常在GPU上进行。 几何阶段负责和每个渲染图元打交道，进行逐顶点、逐多边形的操作。这个阶段可以进一步分成更小的流水阶段，这在下一章中会讲到。<strong>几何阶段的一个重要任务就是把顶点坐标变换到屏幕空间中，再交给光栅器进行处理。通过对输入的渲染图元进行多步处理后，</strong>这一阶段将会输出屏幕空间的二维顶点坐标、每个顶点对应的深度值，着色相等相关信息**，并传递给下一个阶段。</p>
+<ul>
+<li><strong>光栅化阶段</strong></li>
+</ul>
+<p>这一阶段将会使用上个阶段传递的数据来生成屏幕上的像素，并渲染出最终的图像。这个阶段也是在GPU上运行。光栅化的任务主要是决定每个渲染图元中的哪些像素应该被绘制在屏幕上。<strong>它需要对上一个阶段得到的逐顶点数据（例如纹理坐标，顶点颜色等）进行插值</strong>，然后在进行逐像素处理。和上一个阶段相似，光栅化阶段也可以分成更小的流水线阶段。</p>
 <a id="more"></a>
-<p>在Unity中，我们能够选择不同的渲染管线。Unity提供了3种(内建，SRP（URP和HDRP）)预定义的管线对于不同的兼容性和性能特性，我们也可以创建自己的渲染管线。每种类型的管线有这不同的兼容性适配不同类型的游戏，应用和平台，并且每种管线之间切换是非常困难的，因为不同的管线使用的shader不同。所以项目初期选择管线是非常重要的。Unity为我们提供了以下的渲染管线： - <strong>内建管线</strong>是Unity的默认渲染管线。它被定义为通用的渲染管线，限制了它的自定义。 - <strong>URP</strong>是一个快速、可自定义的可编程渲染管线，让我们可以在各种平台上创建优化的图形。 - <strong>HDRP</strong>是一个让您在高端平台上创建尖端的高保真图形的可编程管线。 - <strong>自定义</strong>可以通过Unity的可编程渲染管线API自己创建渲染管线</p>
+<p>在Unity中，我们能够选择不同的渲染管线。Unity提供了3种(内建，SRP（URP和HDRP）)预定义的管线对于不同的兼容性和性能特性，我们也可以创建自己的渲染管线。每种类型的管线有这不同的兼容性适配不同类型的游戏，应用和平台，并且每种管线之间切换是非常困难的，因为不同的管线使用的shader不同。所以项目初期选择管线是非常重要的。Unity为我们提供了以下的渲染管线：</p>
+<ul>
+<li><strong>内建管线</strong>是Unity的默认渲染管线。它被定义为通用的渲染管线，限制了它的自定义。</li>
+<li><strong>URP</strong>是一个快速、可自定义的可编程渲染管线，让我们可以在各种平台上创建优化的图形。</li>
+<li><strong>HDRP</strong>是一个让您在高端平台上创建尖端的高保真图形的可编程管线。</li>
+<li><strong>自定义</strong>可以通过Unity的可编程渲染管线API自己创建渲染管线</li>
+</ul>
 <p><a href="https://docs.unity3d.com/Manual/render-pipelines-feature-comparison.html" target="_blank" rel="noopener">各种渲染管线之间支持的特性对比</a></p>
 <h1 id="内建管线">内建管线</h1>
-<p>内建渲染管线是Unity的传统的管线，它不是基于可编程渲染管线的。我们能够配置它不同的渲染路径，以及通过命令buffer(command buffer)和回调(callback)来对其进行简单的扩展。这个章节将包含以下的内容： - 渲染路径 - 使用命令buffer扩展内建渲染管线 - Shader实例</p>
+<p>内建渲染管线是Unity的传统的管线，它不是基于可编程渲染管线的。我们能够配置它不同的渲染路径，以及通过命令buffer(command buffer)和回调(callback)来对其进行简单的扩展。这个章节将包含以下的内容：</p>
+<ul>
+<li>渲染路径</li>
+<li>使用命令buffer扩展内建渲染管线</li>
+<li>Shader实例</li>
+</ul>
 <h2 id="渲染路径">渲染路径</h2>
 <p>内建渲染管线支持不同的渲染路径，渲染路径被定义为对光照和着色的一些列操作(策略)。不同的渲染路径有不同的能力和性能表现。使用什么样的渲染路径取决于你项目的类型和目标硬件。我们能够在项目的Graphics窗口和Camera面板上去设置使用不同的渲染路径。如果在你运行的设备上不支持选择的渲染路径Unity则会给切换到兼容性更好的渲染路径，比如：在运行的设备上不支持延迟渲染，Unity则会切换到前向渲染路径。Unity总共为我们提供了4种渲染路径：<strong>前向渲染路径</strong>，<strong>延迟渲染路径</strong>, <strong>旧版延迟渲染路劲</strong>和<strong>旧版顶点光照渲染路径</strong>，现在内建渲染管线的渲染路径主要是：<strong>前向渲染路径</strong>和<strong>延迟渲染路径</strong>。不同渲染路径的对比如下图：</p>
 <figure>
@@ -349,7 +360,15 @@
 <p>当工作在SRP时，使用以下这些确保Unity在特定的时候嗲用你的C#代码</p>
 <ul>
 <li><strong>RenderPipeline.Render</strong> 是SRP的主入口函数，Unity将自动的调用此函数。如果你写一个自定渲染管线这就你代码开始的地方。</li>
-<li><strong>RenderPipelineManager</strong> 渲染管线的管理类，此类提供了一些事件，可以订阅这些事件然后执行你的特定代码。 beginFrameRendering 将产生GC 使用beginContextRendering代替 endFrameRendering 将产生GC 使用endContextRendering代替 beginContextRendering endContextRendering beginCameraRendering endCameraRendering</li>
+<li><strong>RenderPipelineManager</strong> 渲染管线的管理类，此类提供了一些事件，可以订阅这些事件然后执行你的特定代码。
+<ul>
+<li>beginFrameRendering 将产生GC 使用beginContextRendering代替</li>
+<li>endFrameRendering 将产生GC 使用endContextRendering代替</li>
+<li>beginContextRendering</li>
+<li>endContextRendering</li>
+<li>beginCameraRendering</li>
+<li>endCameraRendering</li>
+</ul></li>
 </ul>
 <h2 id="安排和执行渲染命令">安排和执行渲染命令</h2>
 <p>在SRP中，我们可以通过CommandBuffer或直接调用ScriptableRenderContext中的API来安排和执行渲染命令。</p>
@@ -446,7 +465,7 @@
 <ol type="1">
 <li>构建关于相机的ScriptableCullingParameters结构体，可以通过调用Camera.TryGetCullingParameters来获取。</li>
 <li>可以选步骤，可以手动的方式构建ScriptableCullingParameters结构体。</li>
-<li>调用ScriptableRenderContext.Cull, 并将结果村粗在CullingResults结构体中。</li>
+<li>调用ScriptableRenderContext.Cull, 并将结果存儲在CullingResults结构体中。</li>
 </ol>
 <p>代码如下：</p>
 <figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">using</span> UnityEngine;</span><br><span class="line"><span class="keyword">using</span> UnityEngine.Rendering;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">ExampleRenderPipeline</span> : <span class="title">RenderPipeline</span> &#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ExampleRenderPipeline</span>(<span class="params"></span>)</span> &#123;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">override</span> <span class="keyword">void</span> <span class="title">Render</span> (<span class="params">ScriptableRenderContext context, Camera[] cameras</span>)</span> &#123;</span><br><span class="line">        <span class="keyword">var</span> cmd = <span class="keyword">new</span> CommandBuffer();</span><br><span class="line">        cmd.ClearRenderTarget(<span class="literal">true</span>, <span class="literal">true</span>, Color.black);</span><br><span class="line">        context.ExecuteCommandBuffer(cmd);</span><br><span class="line">        cmd.Release();</span><br><span class="line"></span><br><span class="line">		<span class="comment">// 遍历所有相机</span></span><br><span class="line">        <span class="keyword">foreach</span> (Camera camera <span class="keyword">in</span> cameras)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="comment">// 获取剔除参数</span></span><br><span class="line">            camera.TryGetCullingParameters(<span class="keyword">out</span> <span class="keyword">var</span> cullingParameters);</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 剔除并存储剔除结果</span></span><br><span class="line">            <span class="keyword">var</span> cullingResults = context.Cull(<span class="keyword">ref</span> cullingParameters);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// 通知图像API执行命令</span></span><br><span class="line">        context.Submit();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -696,7 +715,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">24</span>
+          <span class="site-state-item-count">25</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -759,7 +778,7 @@
 <div class="copyright">
   
   &copy; 2019 – 
-  <span itemprop="copyrightYear">2022</span>
+  <span itemprop="copyrightYear">2023</span>
   <span class="with-love">
     <i class="fa fa-user"></i>
   </span>
@@ -769,13 +788,13 @@
       <i class="fa fa-area-chart"></i>
     </span>
       <span class="post-meta-item-text">站点总字数：</span>
-    <span title="站点总字数">212k</span>
+    <span title="站点总字数">262k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">3:12</span>
+    <span title="站点阅读时长">3:58</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.1
   </div>
