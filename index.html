@@ -187,6 +187,114 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2023/02/14/Unity/Graphics/Batching/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/02/14/Unity/Graphics/Batching/" class="post-title-link" itemprop="url">Static Batching, Dynamic Batching, GUP Instancing和SRP Batcher</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-02-14 08:45:18" itemprop="dateCreated datePublished" datetime="2023-02-14T08:45:18+08:00">2023-02-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-03-20 23:22:55" itemprop="dateModified" datetime="2023-03-20T23:22:55+08:00">2023-03-20</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Unity/" itemprop="url" rel="index">
+                    <span itemprop="name">Unity</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>要在屏幕上绘制几何体时，Unity会调用底层的图形API的Draw命令进行绘制。一个Draw命令高数图形API绘制什么以及如何绘制。每个Draw命令都包含图形API所需的所有信息，其中包括texture,shader和buffers数据。绘图调用可能是资源密集型的，但绘图调用的准备工作通常比绘图调用本身更耗费资源。</p>
+<p>准备绘制调用时，CPU去构建资源并通过图形API改变GPU的内部设置。这些设置统称为渲染状态。改变这些渲染状态通常时资源密集型的操作，比如切换不同的材质时。 因为渲染状态的改变是资源密集型的，所有减少渲染状态改变的次数是主要的优化方法，这有两种方法能到达此目的：</p>
+<ul>
+<li>减少总的绘制调用</li>
+<li>有效组织绘制调用，以减少渲染状态的切换。</li>
+</ul>
+<p>优化绘制调用和渲染状态改变数量，主要减少每帧的时间，它也能：</p>
+<ul>
+<li>减少应用程序的电池的消耗。</li>
+<li>提高应用程序未来开发的可维护性。当你更早的优化绘制调用和渲染状态改变，那么它将长期维持在一个相对优化的级别。</li>
+</ul>
+<p>Unity提供了如下几种优化绘制调用和渲染状态的方法，一些方法只适用于特定的场景。</p>
+<ul>
+<li>Static Batching : 静态合并Mesh来减少绘制调用和渲染状态的改变。需要将对象标记为static。Unity将组合数据发送到GPU，但单独渲染组合中的每个网格。<strong>Unity仍然可以单独剔除网格</strong>，但每次绘制调用占用的资源较少，因为数据状态永远不会改变。（减少DrawCall）</li>
+<li>Dynamic Batching : 在CPU动态上转换网格顶点，将相同配置的顶点分组，并在一次绘制调用中渲染它们。 比如顶点存储相同数量和类型的属性，则它们共享相同的配置。例如，位置和法线。 （减少DrawCall）</li>
+<li>Manually combining meshes : 通过调用Mesh.CombineMeshes函数将多个Mesh合并为一个。 （减少DrawCall）</li>
+<li>GPU Instancing : 渲染相同的mesh多次。GPU 实例化对于绘制在场景中多次出现的几何图形非常有用，例如树木或灌木丛。（减少DrawCall）</li>
+<li>SRP Batcher : 在SRP项目中，可以使用SRP Batcher减少相同着色器变体的材质准备和绘制调用所需的CPU时间。 （不减少DrawCall，减少状态改变次数）</li>
+</ul>
+<p>您可以在同一场景中使用多个绘制调用优化方法，但请注意，Unity会按特定顺序对绘制调用优化方法进行优先排序。如果您将一个游戏对象标记为使用多种绘制调用优化方法，Unity将使用优先级最高的方法。唯一的例外是SRP Batcher。当您使用SRP Batcher时，Unity还支持对与SRP Batcher兼容的游戏对象进行静态批处理。 Unity 按以下顺序对绘制调用优化进行优先排序：</p>
+<ol type="1">
+<li>SRP Batcher and Static batching</li>
+<li>GPU Instancing</li>
+<li>Dynamic Batching</li>
+</ol>
+<p>如果您将GameObject标记为静态批处理并且Unity成功对其进行了批处理，Unity会禁用该GameObject的GPU实例化，即使渲染器使用实例化着色器也是如此。发生这种情况时，Inspector 窗口显示一条警告消息，建议您禁用静态批处理。 同样，如果Unity可以对网格使用GPU实例化，Unity会禁用该网格的动态批处理。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2023/02/14/Unity/Graphics/Batching/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2022/10/06/Unity/Graphics/URP%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB-%E5%BA%94%E7%94%A8%E9%98%B6%E6%AE%B5/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -385,6 +493,95 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/11/29/%E6%B8%B8%E6%88%8F/Map/%E5%85%AD%E8%BE%B9%E5%BD%A2%E7%BD%91%E6%A0%BC/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/11/29/%E6%B8%B8%E6%88%8F/Map/%E5%85%AD%E8%BE%B9%E5%BD%A2%E7%BD%91%E6%A0%BC/" class="post-title-link" itemprop="url">六边形网格</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-11-29 12:00:02" itemprop="dateCreated datePublished" datetime="2021-11-29T12:00:02+08:00">2021-11-29</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-04-10 18:41:00" itemprop="dateModified" datetime="2022-04-10T18:41:00+08:00">2022-04-10</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Map/" itemprop="url" rel="index">
+                    <span itemprop="name">Map</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>这篇文章覆盖了制作六边形地图所涉及到相关的方法，通用公式和算法。为了文章更加优雅简洁，文中的实例都将使用伪代码进行描述。</p>
+<h1 id="几何性质">几何性质</h1>
+<p>六边形是由六个边组成的。正六边形的每条边长度相同。我们这里假设所有的六边形都是正六边形。六边形的方向有两个： 1. 垂直列方向(六边形的任意两条平行边在垂直方向上) <img src="/images/map/hex_ver.png" alt="垂直方向" /></p>
+<ol start="2" type="1">
+<li>水平行反向(六边形的任意两条平行边在水平方向上) <img src="/images/map/hex_hor.png" alt="水平方向" /></li>
+</ol>
+<p>六边形有6个边和6个角。每个边被两个六边形共享。每个角被三个六边形共享。更多关于中心点(centers), 边(sides), 和 角(corners)可以参见<a href="http://www-cs-students.stanford.edu/~amitp/game-programming/grids/" target="_blank" rel="noopener">这篇文章（四边形，六边性和三角形）</a>。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/11/29/%E6%B8%B8%E6%88%8F/Map/%E5%85%AD%E8%BE%B9%E5%BD%A2%E7%BD%91%E6%A0%BC/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/11/29/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/Lua/Lua%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -510,95 +707,6 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/11/29/%E6%B8%B8%E6%88%8F/Map/%E5%85%AD%E8%BE%B9%E5%BD%A2%E7%BD%91%E6%A0%BC/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpg">
-      <meta itemprop="name" content="张卫">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="张卫的博客">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/11/29/%E6%B8%B8%E6%88%8F/Map/%E5%85%AD%E8%BE%B9%E5%BD%A2%E7%BD%91%E6%A0%BC/" class="post-title-link" itemprop="url">六边形网格</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-11-29 12:00:02" itemprop="dateCreated datePublished" datetime="2021-11-29T12:00:02+08:00">2021-11-29</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-04-10 18:41:00" itemprop="dateModified" datetime="2022-04-10T18:41:00+08:00">2022-04-10</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Map/" itemprop="url" rel="index">
-                    <span itemprop="name">Map</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>这篇文章覆盖了制作六边形地图所涉及到相关的方法，通用公式和算法。为了文章更加优雅简洁，文中的实例都将使用伪代码进行描述。</p>
-<h1 id="几何性质">几何性质</h1>
-<p>六边形是由六个边组成的。正六边形的每条边长度相同。我们这里假设所有的六边形都是正六边形。六边形的方向有两个： 1. 垂直列方向(六边形的任意两条平行边在垂直方向上) <img src="/images/map/hex_ver.png" alt="垂直方向" /></p>
-<ol start="2" type="1">
-<li>水平行反向(六边形的任意两条平行边在水平方向上) <img src="/images/map/hex_hor.png" alt="水平方向" /></li>
-</ol>
-<p>六边形有6个边和6个角。每个边被两个六边形共享。每个角被三个六边形共享。更多关于中心点(centers), 边(sides), 和 角(corners)可以参见<a href="http://www-cs-students.stanford.edu/~amitp/game-programming/grids/" target="_blank" rel="noopener">这篇文章（四边形，六边性和三角形）</a>。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/11/29/%E6%B8%B8%E6%88%8F/Map/%E5%85%AD%E8%BE%B9%E5%BD%A2%E7%BD%91%E6%A0%BC/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/11/05/Unity/Graphics/Unity%E6%B8%B2%E6%9F%93%E7%AE%A1%E7%BA%BF%E4%BB%8B%E7%BB%8D/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -672,104 +780,6 @@
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/2021/11/05/Unity/Graphics/Unity%E6%B8%B2%E6%9F%93%E7%AE%A1%E7%BA%BF%E4%BB%8B%E7%BB%8D/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpg">
-      <meta itemprop="name" content="张卫">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="张卫的博客">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/" class="post-title-link" itemprop="url">UGUI基础</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-08-04 17:52:28" itemprop="dateCreated datePublished" datetime="2021-08-04T17:52:28+08:00">2021-08-04</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-02-05 16:11:59" itemprop="dateModified" datetime="2022-02-05T16:11:59+08:00">2022-02-05</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Unity/" itemprop="url" rel="index">
-                    <span itemprop="name">Unity</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="canvas的渲染">Canvas的渲染</h1>
-<h2 id="渲染基本层次">渲染基本层次</h2>
-<p>基本渲染层次是根据可视化对象在继承窗口中的显示顺序来渲染的，在此有两种方式可以调节对象的顺序。第一种：直接在继承窗口拖拽。第二种：通过Transform的SetAsFirstSibling, SetAsLastSibling, and SetSiblingIndex函数来进行调节。</p>
-<h2 id="渲染模式">渲染模式</h2>
-<ul>
-<li><strong>屏幕覆盖模式</strong></li>
-</ul>
-<p>直接屏幕映射方式显示，永远在屏幕的最上面，跟相机无关即使没有相机也可以显示</p>
-<ul>
-<li><strong>屏幕相机模式</strong></li>
-</ul>
-<p>此模式和屏幕模式相似但是受到相机的限制，但是始终都显示在相机的前面，如果有3D物体在UI的前面也是会挡住UI。</p>
-<ul>
-<li><strong>世界模式</strong></li>
-</ul>
-<p>把Canvas当成普通的对象在世界坐标系中定位渲染。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -869,6 +879,104 @@
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/2021/08/04/Unity/UI/UGUI%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/" class="post-title-link" itemprop="url">UGUI基础</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-08-04 17:52:28" itemprop="dateCreated datePublished" datetime="2021-08-04T17:52:28+08:00">2021-08-04</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-02-05 16:11:59" itemprop="dateModified" datetime="2022-02-05T16:11:59+08:00">2022-02-05</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Unity/" itemprop="url" rel="index">
+                    <span itemprop="name">Unity</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="canvas的渲染">Canvas的渲染</h1>
+<h2 id="渲染基本层次">渲染基本层次</h2>
+<p>基本渲染层次是根据可视化对象在继承窗口中的显示顺序来渲染的，在此有两种方式可以调节对象的顺序。第一种：直接在继承窗口拖拽。第二种：通过Transform的SetAsFirstSibling, SetAsLastSibling, and SetSiblingIndex函数来进行调节。</p>
+<h2 id="渲染模式">渲染模式</h2>
+<ul>
+<li><strong>屏幕覆盖模式</strong></li>
+</ul>
+<p>直接屏幕映射方式显示，永远在屏幕的最上面，跟相机无关即使没有相机也可以显示</p>
+<ul>
+<li><strong>屏幕相机模式</strong></li>
+</ul>
+<p>此模式和屏幕模式相似但是受到相机的限制，但是始终都显示在相机的前面，如果有3D物体在UI的前面也是会挡住UI。</p>
+<ul>
+<li><strong>世界模式</strong></li>
+</ul>
+<p>把Canvas当成普通的对象在世界坐标系中定位渲染。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1060,90 +1168,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/03/21/Unity/Animation/%E5%8A%A8%E7%94%BB%E4%BB%8B%E7%BB%8D/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpg">
-      <meta itemprop="name" content="张卫">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="张卫的博客">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/03/21/Unity/Animation/%E5%8A%A8%E7%94%BB%E4%BB%8B%E7%BB%8D/" class="post-title-link" itemprop="url">动画介绍</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-03-21 17:52:28" itemprop="dateCreated datePublished" datetime="2021-03-21T17:52:28+08:00">2021-03-21</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-04 22:09:17" itemprop="dateModified" datetime="2021-08-04T22:09:17+08:00">2021-08-04</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Unity/" itemprop="url" rel="index">
-                    <span itemprop="name">Unity</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="介绍">介绍</h1>
-<p>传统动画(序列帧动画)是一种动画技术，其技术原理是通过人眼的视觉残留让连续的动作图片按一定的速度（帧率，帧/每秒）一帧一帧的切换使其产生连续的动画。在早期，动画的每帧都是手工绘制的，工作量巨大。在计算机动画出现之前，该技术是电影中动画的主要形式。计算机出现之后，随着CG行业技术的发展，人们可以在电脑上进行绘画并进行数字化的存在，但是并没有解决一帧帧的绘制问题。随着技术的不断发展随后便现了基于关键帧和插值技术的运动图形动画和骨骼动画等。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/03/21/Unity/Animation/%E5%8A%A8%E7%94%BB%E4%BB%8B%E7%BB%8D/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1194,7 +1218,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">25</span>
+          <span class="site-state-item-count">26</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1207,7 +1231,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-count">15</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -1267,13 +1291,13 @@
       <i class="fa fa-area-chart"></i>
     </span>
       <span class="post-meta-item-text">站点总字数：</span>
-    <span title="站点总字数">262k</span>
+    <span title="站点总字数">276k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">3:58</span>
+    <span title="站点阅读时长">4:11</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.1
   </div>
