@@ -66,7 +66,7 @@
 <meta property="og:image" content="http://yoursite.com/images/unity/graphics/hsv_hsi_col.png">
 <meta property="og:image" content="http://yoursite.com/images/unity/graphics/se_wu.png">
 <meta property="article:published_time" content="2024-04-21T01:46:04.000Z">
-<meta property="article:modified_time" content="2024-04-21T08:38:45.652Z">
+<meta property="article:modified_time" content="2024-04-21T08:43:44.841Z">
 <meta property="article:author" content="张卫">
 <meta property="article:tag" content="后处理">
 <meta name="twitter:card" content="summary">
@@ -225,7 +225,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2024-04-21 09:46:04 / 修改时间：16:38:45" itemprop="dateCreated datePublished" datetime="2024-04-21T09:46:04+08:00">2024-04-21</time>
+              <time title="创建时间：2024-04-21 09:46:04 / 修改时间：16:43:44" itemprop="dateCreated datePublished" datetime="2024-04-21T09:46:04+08:00">2024-04-21</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -257,12 +257,9 @@
 <p>在影像制作和后期处理中，Linear、LogC和Gamma是三种关键的概念，它们描述了不同的图像数据处理和表示方法。理解它们之间的区别对于正确处理图像和视频数据非常重要。</p>
 <p><strong>Linear（线性）:</strong> Linear指的是一种线性响应的色彩空间，其中记录的图像亮度值直接对应于场景中的实际光照强度。在线性色彩空间中，如果场景中一个区域的光照强度是另一个区域的两倍，那么记录的数值也会是两倍。这种表示方式使得图像的色彩混合和处理在数学上更加直接和简单，但由于人眼对亮度的感知是非线性的，线性空间通常不适用于最终图像的显示。</p>
 <p><strong>LogC（对数）</strong> LogC是ARRI摄影机特有的一种对数色彩空间，它旨在通过对数曲线来模拟人眼对亮度的非线性感知，使得在有限的比特深度下能够捕获更宽的动态范围。LogC色彩空间特别适合于记录高动态范围的场景，因为它能够有效地保留高光和阴影中的细节。然而，LogC图像在没有经过适当的色彩校正或应用LUT（查找表）之前，看起来会显得非常低饱和和低对比度。</p>
-<p><strong>Gamma</strong></p>
-<p>Gamma校正是一种用于调整图像亮度的非线性操作，旨在使图像在特定显示设备上的显示更符合人眼的感知特性。Gamma校正可以被视为在图像数据和最终显示之间的一个桥梁，用于调整图像的整体亮度和对比度。不同的显示设备和媒体标准可能会使用不同的Gamma值，如sRGB标准使用大约2.2的Gamma值。</p>
+<p><strong>Gamma</strong> Gamma校正是一种用于调整图像亮度的非线性操作，旨在使图像在特定显示设备上的显示更符合人眼的感知特性。Gamma校正可以被视为在图像数据和最终显示之间的一个桥梁，用于调整图像的整体亮度和对比度。不同的显示设备和媒体标准可能会使用不同的Gamma值，如sRGB标准使用大约2.2的Gamma值。</p>
 <p><strong>总结</strong></p>
-<p><strong>Linear色彩空间：</strong>最适合图像的处理和合成，需要在最终输出前转换到适合观看的色彩空间。</p>
-<p><strong>LogC色彩空间：</strong>用于捕获和记录高动态范围的图像，需要在后期处理中进行色彩校正。</p>
-<p><strong>Gamma校正：</strong>用于调整图像的显示，以符合人眼对亮度的非线性感知和特定显示设备的要求。</p>
+<p><strong>Linear色彩空间：</strong>最适合图像的处理和合成，需要在最终输出前转换到适合观看的色彩空间。 <strong>LogC色彩空间：</strong>用于捕获和记录高动态范围的图像，需要在后期处理中进行色彩校正。 <strong>Gamma校正：</strong>用于调整图像的显示，以符合人眼对亮度的非线性感知和特定显示设备的要求。</p>
 <a id="more"></a>
 <h2 id="颜色空间">颜色空间</h2>
 <h3 id="xyz颜色空间">XYZ颜色空间</h3>
