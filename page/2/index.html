@@ -187,7 +187,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/07/18/%E6%B8%B8%E6%88%8F/%E6%B8%B8%E6%88%8F%E4%BB%8B%E7%BB%8D/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/11/05/Unity/Graphics/Unity%E6%B8%B2%E6%9F%93%E7%AE%A1%E7%BA%BF%E4%BB%8B%E7%BB%8D/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpg">
@@ -201,7 +201,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2020/07/18/%E6%B8%B8%E6%88%8F/%E6%B8%B8%E6%88%8F%E4%BB%8B%E7%BB%8D/" class="post-title-link" itemprop="url">游戏介绍</a>
+            <a href="/2021/11/05/Unity/Graphics/Unity%E6%B8%B2%E6%9F%93%E7%AE%A1%E7%BA%BF%E4%BB%8B%E7%BB%8D/" class="post-title-link" itemprop="url">Unity渲染管线介绍</a>
         </h1>
 
         <div class="post-meta">
@@ -211,15 +211,26 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-07-18 14:43:52" itemprop="dateCreated datePublished" datetime="2020-07-18T14:43:52+08:00">2020-07-18</time>
+              <time title="创建时间：2021-11-05 12:20:02" itemprop="dateCreated datePublished" datetime="2021-11-05T12:20:02+08:00">2021-11-05</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-04 21:47:20" itemprop="dateModified" datetime="2021-08-04T21:47:20+08:00">2021-08-04</time>
+                <time title="修改时间：2023-03-20 23:21:30" itemprop="dateModified" datetime="2023-03-20T23:21:30+08:00">2023-03-20</time>
               </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Unity/" itemprop="url" rel="index">
+                    <span itemprop="name">Unity</span>
+                  </a>
+                </span>
+            </span>
 
           
 
@@ -232,9 +243,768 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <p>https://zhuanlan.zhihu.com/p/22745932</p>
-<p>https://gameinstitute.qq.com/community/detail/101952</p>
+          <h1 id="什么渲染管线">什么渲染管线</h1>
+<p>渲染管线跟工厂的流水线一样，工厂的流水线为了生成最终的一个产品，每个流水线的工人只干一件特定的事情，最后将一个产品完成。计算机的图形渲染管线和工厂的流水线一样，只是图形渲染管线最终生成的是一张二维图片。
+我们将一个渲染流程分成3个阶段：<strong>应用阶段</strong>、<strong>几何阶段</strong>、<strong>光栅化阶段</strong>。注意这仅仅是概念性阶段，每个阶段本身通常也是一个流水线系统，即包含了子流水线阶段。如下图：
+<img src="https://divad1111.github.io/images/shader/pflow.png"
+alt="渲染流水线三个概念图" /></p>
+<ul>
+<li><strong>应用阶段</strong></li>
+</ul>
+<p>从名字我们可以看出，这个阶段是由我们的应用主导的，因此通常由CPU负责实现。换句话说，我们这些开发者具有这个阶段的绝对控制权。
+在这阶段中，开发者有3个主要任务： 1.
+我们要准备好场景数据，例如摄像机的位置、视椎体、场景中包含了哪些模型、使用了哪些光源等等；
+2.
+为了渲染性能，我们往往需要做一个粗粒度剔除（culling）工作,以把哪些不可见的物体踢出去，这样就不需要再移交给几何阶段进行处理；
+3.
+最后我们要设置好每个模型的渲染状态，这些渲染状态包括但不限于它们使用的材质（漫反射颜色、高光反色颜色）、使用的纹理、使用的Shader等。
+这一阶段最重要的输出是渲染所需的几何信息，即<strong>渲染图元（rendering
+primitives）</strong>。通俗来讲，渲染图元可以是点、线、三角面等。这些渲染图元将会被传递给下一个阶段——几何阶段。</p>
+<ul>
+<li><strong>几何阶段</strong></li>
+</ul>
+<p>几何阶段用于处理所有和我们要绘制的几何相关的事情。例如，决定需要绘制的图元是什么，怎么绘制它们，在哪里绘制它们。这一阶段通常在GPU上进行。
+几何阶段负责和每个渲染图元打交道，进行逐顶点、逐多边形的操作。这个阶段可以进一步分成更小的流水阶段，这在下一章中会讲到。<strong>几何阶段的一个重要任务就是把顶点坐标变换到屏幕空间中，再交给光栅器进行处理。通过对输入的渲染图元进行多步处理后，</strong>这一阶段将会输出屏幕空间的二维顶点坐标、每个顶点对应的深度值，着色相等相关信息**，并传递给下一个阶段。</p>
+<ul>
+<li><strong>光栅化阶段</strong></li>
+</ul>
+<p>这一阶段将会使用上个阶段传递的数据来生成屏幕上的像素，并渲染出最终的图像。这个阶段也是在GPU上运行。光栅化的任务主要是决定每个渲染图元中的哪些像素应该被绘制在屏幕上。<strong>它需要对上一个阶段得到的逐顶点数据（例如纹理坐标，顶点颜色等）进行插值</strong>，然后在进行逐像素处理。和上一个阶段相似，光栅化阶段也可以分成更小的流水线阶段。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/11/05/Unity/Graphics/Unity%E6%B8%B2%E6%9F%93%E7%AE%A1%E7%BA%BF%E4%BB%8B%E7%BB%8D/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
 
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/08/04/%E5%B7%A5%E5%85%B7/Hexo/%E5%9C%A8Hexo%E4%B8%AD%E6%B8%B2%E6%9F%93MathJax%E6%95%B0%E5%AD%A6%E5%85%AC%E5%BC%8F/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/08/04/%E5%B7%A5%E5%85%B7/Hexo/%E5%9C%A8Hexo%E4%B8%AD%E6%B8%B2%E6%9F%93MathJax%E6%95%B0%E5%AD%A6%E5%85%AC%E5%BC%8F/" class="post-title-link" itemprop="url">在Hexo中使用Mathjax渲染数学公式</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-08-04 21:47:20" itemprop="dateCreated datePublished" datetime="2021-08-04T21:47:20+08:00">2021-08-04</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%B7%A5%E5%85%B7/" itemprop="url" rel="index">
+                    <span itemprop="name">工具</span>
+                  </a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%B7%A5%E5%85%B7/Hexo/" itemprop="url" rel="index">
+                    <span itemprop="name">Hexo</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言">前言</h1>
+<p>Mathjax是一种支持在所有浏览器上显示数学公式的Javascript引擎，它支持绝大部分的Tex/LaTex语法，并且有三种输出HTML/CSS, SVG(矢量图)和MathML（Firefox支持的数公式标记语言）。本文主要介绍如何在将Mathjax整合进入Hexo中，在整合之前先介绍一下Tex/LaTex。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/08/04/%E5%B7%A5%E5%85%B7/Hexo/%E5%9C%A8Hexo%E4%B8%AD%E6%B8%B2%E6%9F%93MathJax%E6%95%B0%E5%AD%A6%E5%85%AC%E5%BC%8F/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/" class="post-title-link" itemprop="url">UGUI基础</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-08-04 17:52:28" itemprop="dateCreated datePublished" datetime="2021-08-04T17:52:28+08:00">2021-08-04</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-02-09 15:33:20" itemprop="dateModified" datetime="2022-02-09T15:33:20+08:00">2022-02-09</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Unity/" itemprop="url" rel="index">
+                    <span itemprop="name">Unity</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="canvas的渲染">Canvas的渲染</h1>
+<h2 id="渲染基本层次">渲染基本层次</h2>
+<p>基本渲染层次是根据可视化对象在继承窗口中的显示顺序来渲染的，在此有两种方式可以调节对象的顺序。第一种：直接在继承窗口拖拽。第二种：通过Transform的SetAsFirstSibling,
+SetAsLastSibling, and SetSiblingIndex函数来进行调节。</p>
+<h2 id="渲染模式">渲染模式</h2>
+<ul>
+<li><strong>屏幕覆盖模式</strong></li>
+</ul>
+<p>直接屏幕映射方式显示，永远在屏幕的最上面，跟相机无关即使没有相机也可以显示</p>
+<ul>
+<li><strong>屏幕相机模式</strong></li>
+</ul>
+<p>此模式和屏幕模式相似但是受到相机的限制，但是始终都显示在相机的前面，如果有3D物体在UI的前面也是会挡住UI。</p>
+<ul>
+<li><strong>世界模式</strong></li>
+</ul>
+<p>把Canvas当成普通的对象在世界坐标系中定位渲染。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/08/04/Unity/UI/UGUI%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/08/04/Unity/UI/UGUI%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" class="post-title-link" itemprop="url">UGUI源码分析</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-08-04 17:52:28" itemprop="dateCreated datePublished" datetime="2021-08-04T17:52:28+08:00">2021-08-04</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-10-27 23:06:29" itemprop="dateModified" datetime="2021-10-27T23:06:29+08:00">2021-10-27</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Unity/" itemprop="url" rel="index">
+                    <span itemprop="name">Unity</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="基础回顾">基础回顾</h1>
+<p>在正式分析UGUI源码前，让我们回顾一下，模型的组成，以及渲染。</p>
+<h2 id="模型组成">模型组成</h2>
+<p>模型是由一系列的三角形组成，三角形又是由三个顶点构成的，每个顶点上保存了相关的顶点属性（顶点位置，顶点颜色，顶点UV，顶点法线，顶点切线）在Unity中使用Mesh类来表示。</p>
+<h2 id="模型渲染">模型渲染</h2>
+<p><strong>模型筛选：</strong></p>
+<ol type="1">
+<li>首先根据相机的Culling Mask剔除那些不需要此相机渲染的模型。</li>
+<li>然后根据摄像机的视锥体大小，剔除完全在视锥体外的模型。</li>
+</ol>
+<p><strong>模型分类:</strong></p>
+<p>Unity将根据需要渲染的模型Shader中RenderQueue对模型进行分类，分为不透明模型(小于2500)和透明模型(大于等于2500)。</p>
+<p><strong>排序渲染模型:</strong></p>
+<ol type="1">
+<li>首先通过sortLayer和sortingOrder对不透明模型进行进行排序，越低的越先渲染；然后再通过Shader中的RenderQueue进行排序；再然后就通过包围盒中心点的深度（距离摄像机的位置）进行排序；最后如果深度相同则还可以通过ZBias进行深度调节。</li>
+<li>透明物体同样的使用上述规则进行排序。</li>
+</ol>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/08/04/Unity/UI/UGUI%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/03/22/Unity/Animation/%E9%AA%A8%E9%AA%BC%E5%8A%A8%E7%94%BB/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/22/Unity/Animation/%E9%AA%A8%E9%AA%BC%E5%8A%A8%E7%94%BB/" class="post-title-link" itemprop="url">骨骼动画</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-22 21:20:49" itemprop="dateCreated datePublished" datetime="2021-03-22T21:20:49+08:00">2021-03-22</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-07 12:49:44" itemprop="dateModified" datetime="2021-08-07T12:49:44+08:00">2021-08-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Unity/" itemprop="url" rel="index">
+                    <span itemprop="name">Unity</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>本文主要基于Blender创建一个简单的机器人，并基于此机器人来了解骨骼动画的制作流程。制作骨骼动画主要包含以下步骤：</p>
+<ol type="1">
+<li>建模</li>
+<li>构建骨骼</li>
+<li>蒙皮和权重绘制</li>
+<li>动画制作</li>
+</ol>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/03/22/Unity/Animation/%E9%AA%A8%E9%AA%BC%E5%8A%A8%E7%94%BB/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/03/21/Unity/Animation/Unity%E5%BA%8F%E5%88%97%E5%B8%A7%E5%8A%A8%E7%94%BB/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/21/Unity/Animation/Unity%E5%BA%8F%E5%88%97%E5%B8%A7%E5%8A%A8%E7%94%BB/" class="post-title-link" itemprop="url">Unity序列帧动画</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-21 18:04:00" itemprop="dateCreated datePublished" datetime="2021-03-21T18:04:00+08:00">2021-03-21</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-07 12:49:44" itemprop="dateModified" datetime="2021-08-07T12:49:44+08:00">2021-08-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Unity/" itemprop="url" rel="index">
+                    <span itemprop="name">Unity</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>Unity实现序列帧动画主要有两种方式，一个是通过Unity自带的Animation进行制作，二是根据序列帧动画原理通过代码按固定帧率切换显示的图片即可实现序列帧动画效果。
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/03/21/Unity/Animation/Unity%E5%BA%8F%E5%88%97%E5%B8%A7%E5%8A%A8%E7%94%BB/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/03/17/Unity/Unity%E5%8D%8F%E7%A8%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/17/Unity/Unity%E5%8D%8F%E7%A8%8B/" class="post-title-link" itemprop="url">Unity协程</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-17 12:13:25" itemprop="dateCreated datePublished" datetime="2021-03-17T12:13:25+08:00">2021-03-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-04 21:47:20" itemprop="dateModified" datetime="2021-08-04T21:47:20+08:00">2021-08-04</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Unity/" itemprop="url" rel="index">
+                    <span itemprop="name">Unity</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="为什么要使用协程">为什么要使用协程</h1>
+<p>为什么要使用协程？，先来看段代码： <figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">using</span> System.Collections;</span><br><span class="line"><span class="keyword">using</span> UnityEngine;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">TestCoroutine</span> : <span class="title">MonoBehaviour</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">Start</span>(<span class="params"></span>)</span></span><br><span class="line"><span class="function"></span>    &#123;   </span><br><span class="line">        StartCoroutine(CoroutineFunc());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function">IEnumerator <span class="title">CoroutineFunc</span>(<span class="params"></span>)</span></span><br><span class="line"><span class="function"></span>    &#123;</span><br><span class="line">        <span class="keyword">var</span> wfeof = <span class="keyword">new</span> WaitForEndOfFrame()</span><br><span class="line">        <span class="comment">//1000次循环大概1s</span></span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">1000</span>; i++)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="comment">//假设做大量的工作,大概CPU耗时:0.1s</span></span><br><span class="line">            DoManyWork(); </span><br><span class="line">            <span class="keyword">yield</span> <span class="keyword">return</span> wfeof;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">DoManyWork</span>(<span class="params"></span>)</span></span><br><span class="line"><span class="function"></span>    &#123;</span><br><span class="line">        Debug.Log(<span class="string">"DoManyWork is called."</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>上面的CoroutineFunc函数里面消耗了大量的CPU时间，在没有协程的开发环境中，比如像C/C++这样的开发语言，一般会创建一个线程来执行这种耗时的操作，多线程开发也会牵扯到各种数据和资源的互斥访问和线程同步的问题，这也导致在其他线程访问Unity引擎相关的组件会出现问题，因为我们没法控制其他的线程在访问操作一个对象时Unity引擎不去访问它，所以在Unity中其他线程一旦访问Unity引擎相关的组件就可能回出错。因此为让Unity的主线程不被这种耗时的操作给卡住，就只有将这种耗时的操作分到多帧里去执行，所以就出现了这种伪线程即协程。
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/03/17/Unity/Unity%E5%8D%8F%E7%A8%8B/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/03/14/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/CSharp/%E5%A7%94%E6%89%98%E4%B8%8E%E4%BA%8B%E4%BB%B6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/14/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/CSharp/%E5%A7%94%E6%89%98%E4%B8%8E%E4%BA%8B%E4%BB%B6/" class="post-title-link" itemprop="url">委托与事件</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-14 18:16:09" itemprop="dateCreated datePublished" datetime="2021-03-14T18:16:09+08:00">2021-03-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-08-04 21:47:20" itemprop="dateModified" datetime="2021-08-04T21:47:20+08:00">2021-08-04</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/" itemprop="url" rel="index">
+                    <span itemprop="name">编程语言</span>
+                  </a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/C/" itemprop="url" rel="index">
+                    <span itemprop="name">C#</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="委托">委托</h1>
+<p>什么是委托？委托与事件有什么关系呢？先来看一下委托的定义，代码如下： <figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">namespace</span> <span class="title">DotnetExample</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">//定义一个委托</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">delegate</span> <span class="keyword">void</span> <span class="title">VoidCallback</span>(<span class="params"></span>)</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Console必须要一个Main函数才能编译通过</span></span><br><span class="line">    <span class="keyword">class</span> <span class="title">Program</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">Main</span>(<span class="params"><span class="keyword">string</span>[] args</span>)</span></span><br><span class="line"><span class="function"></span>        &#123;   </span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/03/14/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/CSharp/%E5%A7%94%E6%89%98%E4%B8%8E%E4%BA%8B%E4%BB%B6/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/03/04/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/CSharp/%E8%81%8A%E8%81%8A.Net%E5%BC%80%E5%8F%91%E5%B9%B3%E5%8F%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/04/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/CSharp/%E8%81%8A%E8%81%8A.Net%E5%BC%80%E5%8F%91%E5%B9%B3%E5%8F%B0/" class="post-title-link" itemprop="url">聊聊.Net开发平台</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-04 17:30:21" itemprop="dateCreated datePublished" datetime="2021-03-04T17:30:21+08:00">2021-03-04</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-03-11 22:58:49" itemprop="dateModified" datetime="2022-03-11T22:58:49+08:00">2022-03-11</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/" itemprop="url" rel="index">
+                    <span itemprop="name">编程语言</span>
+                  </a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/C/" itemprop="url" rel="index">
+                    <span itemprop="name">C#</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="介绍">介绍</h1>
+<p>.Net是什么呢？.Net是1998年微软剑桥研究院的技术人员研究的下一代开发技术，并将其制定的规范(CLI)提交到了ECMA，形成了<a
+href="https://www.ecma-international.org/publications-and-standards/standards/ecma-335/">ECMA335</a>规范,
+随后被ISO采纳为国际标准<a
+href="https://www.iso.org/standard/58046.html">ISO/IEC
+23271:2012</a>。到2002微软正式发布了.NET Framework 1.0。.NET
+Framework是.Net开发技术规范的第一个实现，所以在初期.Net和.Net
+Framework指的是同一个东西，但它们本质上是完全不同的。由于当时只有微软的.Net
+Framework实现了.Net标准所以也仅限于Windows开发栈。.Net
+Framework平台的内容包含很多组件和库，像WinForm, WebForm,
+WPF，Asp.net等。直到2004年Mono让其可以在Linux上运行了，慢慢的Mono也开始支持Android,
+iOS，MacOSx让.Net实现跨平台。
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/03/04/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/CSharp/%E8%81%8A%E8%81%8A.Net%E5%BC%80%E5%8F%91%E5%B9%B3%E5%8F%B0/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -327,712 +1097,11 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/07/11/%E6%B8%B8%E6%88%8F/AI/%E6%B8%B8%E6%88%8FAI%E4%BB%8B%E7%BB%8D/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpg">
-      <meta itemprop="name" content="张卫">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="张卫的博客">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/07/11/%E6%B8%B8%E6%88%8F/AI/%E6%B8%B8%E6%88%8FAI%E4%BB%8B%E7%BB%8D/" class="post-title-link" itemprop="url">游戏AI介绍</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-07-11 18:22:45" itemprop="dateCreated datePublished" datetime="2020-07-11T18:22:45+08:00">2020-07-11</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-04 21:47:20" itemprop="dateModified" datetime="2021-08-04T21:47:20+08:00">2021-08-04</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="什么是游戏ai">什么是游戏AI</h1>
-<p>AI（artificial intelligence）即人工智能，游戏中的AI是让游戏里的对象具有一定的智能化，能够思考和决策，比如RPG游戏中的怪物知道有玩家攻击自己时进行反击，当玩家逃跑时会进行追击，当玩家远离自己时则放弃追击，这一系的决策和动作就是游戏中的AI要做的。和现下流行的人工智能不一样的是游戏里的AI还不能那么智能，不过现在已经在尝试将机器学习和游戏结合，让游戏对象更智能。</p>
-<h2 id="自治智能体">自治智能体</h2>
-<p>正如其命，有自治动作的智能体称之为“自治智能体”。在《看门狗》《GTA》里，街上走路的人群或者开动的汽车 就是一种自治智能体。主角开车如果冲向它们，这些自治智能体能够自行判断并做出躲开的动作。</p>
-<h2 id="群体智能体">群体智能体</h2>
-<p>如其名，与自治智能体相对，“群体智能”一般用于编队的AI或者集群的AI。例如足球游戏里，AI操控一方所有球员互相配合传球踢球。又或者射击游戏里，AI操控一支小队通过战术进攻据点。
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2020/07/11/%E6%B8%B8%E6%88%8F/AI/%E6%B8%B8%E6%88%8FAI%E4%BB%8B%E7%BB%8D/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/01/%E6%95%B0%E5%AD%A6%E7%89%A9%E7%90%86/%E7%9F%A9%E9%98%B5/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpg">
-      <meta itemprop="name" content="张卫">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="张卫的博客">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/04/01/%E6%95%B0%E5%AD%A6%E7%89%A9%E7%90%86/%E7%9F%A9%E9%98%B5/" class="post-title-link" itemprop="url">矩阵</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-04-01 11:02:05" itemprop="dateCreated datePublished" datetime="2020-04-01T11:02:05+08:00">2020-04-01</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-04 21:47:20" itemprop="dateModified" datetime="2021-08-04T21:47:20+08:00">2021-08-04</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%95%B0%E5%AD%A6%E7%89%A9%E7%90%86/" itemprop="url" rel="index">
-                    <span itemprop="name">数学物理</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="矩阵的基础定义">矩阵的基础定义</h1>
-<p>矩阵是3D数学的重要基础，它主要用来描述两个坐标系之间的关系，通过定义一种运算将一个坐标系中的向量转换到另一个坐标系中。</p>
-<h2 id="矩阵的数学定义">矩阵的数学定义</h2>
-<p>在线性代数中，矩阵就是以行和列形式组织的矩形数字块。例如下列的一个3x4的矩阵：</p>
-<span class="math display">\[\begin{bmatrix} 0&amp;-1&amp;1&amp;1 \\ 1&amp;0&amp;1&amp;4 \\ 2&amp;1&amp;3&amp;-4 \end{bmatrix}\]</span>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2020/04/01/%E6%95%B0%E5%AD%A6%E7%89%A9%E7%90%86/%E7%9F%A9%E9%98%B5/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/01/%E6%95%B0%E5%AD%A6%E7%89%A9%E7%90%86/%E5%90%91%E9%87%8F/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpg">
-      <meta itemprop="name" content="张卫">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="张卫的博客">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/04/01/%E6%95%B0%E5%AD%A6%E7%89%A9%E7%90%86/%E5%90%91%E9%87%8F/" class="post-title-link" itemprop="url">向量</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-04-01 11:02:05" itemprop="dateCreated datePublished" datetime="2020-04-01T11:02:05+08:00">2020-04-01</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-04 21:47:20" itemprop="dateModified" datetime="2021-08-04T21:47:20+08:00">2021-08-04</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%95%B0%E5%AD%A6%E7%89%A9%E7%90%86/" itemprop="url" rel="index">
-                    <span itemprop="name">数学物理</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="向量的基本定义">向量的基本定义</h1>
-<h2 id="数学定义">数学定义</h2>
-<p>向量就是一个数列，是一个只有大小和方向的一个数学量，和标量不同，标量是一个只有大小的量。向量的记法如下：</p>
-<p>行向量:<strong>a</strong>=<span class="math inline">\(\begin{bmatrix}1&amp;2&amp;3\end{bmatrix}\)</span></p>
-<p>列向量:<strong>a</strong>=<span class="math inline">\(\begin{bmatrix}1\\2\\3\end{bmatrix}\)</span></p>
-<h2 id="几何定义">几何定义</h2>
-<p>向量是有大小和方向的有向线段。向量和点不同点表示了一个固定的位置然而向量是没有位置的，你画在任何地方都行，因为向量表示它在各个方向上的位移关系。向量的几何表示如下图： <img src="https://imgconvert.csdnimg.cn/aHR0cDovL2ltZy5ibG9nLmNzZG4ubmV0LzIwMTUxMjAxMjM0OTE1ODY5?x-oss-process=image/format,png" alt="这里写图片描述" /></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2020/04/01/%E6%95%B0%E5%AD%A6%E7%89%A9%E7%90%86/%E5%90%91%E9%87%8F/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/01/%E6%B8%B8%E6%88%8F/%E5%AF%BB%E8%B7%AF%E7%AE%97%E6%B3%95/%E6%B8%B8%E6%88%8F%E5%AF%BB%E8%B7%AF%E4%BB%8B%E7%BB%8D/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpg">
-      <meta itemprop="name" content="张卫">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="张卫的博客">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/04/01/%E6%B8%B8%E6%88%8F/%E5%AF%BB%E8%B7%AF%E7%AE%97%E6%B3%95/%E6%B8%B8%E6%88%8F%E5%AF%BB%E8%B7%AF%E4%BB%8B%E7%BB%8D/" class="post-title-link" itemprop="url">游戏寻路介绍</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-04-01 11:02:05" itemprop="dateCreated datePublished" datetime="2020-04-01T11:02:05+08:00">2020-04-01</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-04 21:47:20" itemprop="dateModified" datetime="2021-08-04T21:47:20+08:00">2021-08-04</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%B8%B8%E6%88%8F/" itemprop="url" rel="index">
-                    <span itemprop="name">游戏</span>
-                  </a>
-                </span>
-                  ，
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%B8%B8%E6%88%8F/%E5%AF%BB%E8%B7%AF%E7%AE%97%E6%B3%95/" itemprop="url" rel="index">
-                    <span itemprop="name">寻路算法</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/03/10/%E6%9C%8D%E5%8A%A1%E5%99%A8/Docker/CentOS%E5%AE%89%E8%A3%85Docker/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpg">
-      <meta itemprop="name" content="张卫">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="张卫的博客">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/03/10/%E6%9C%8D%E5%8A%A1%E5%99%A8/Docker/CentOS%E5%AE%89%E8%A3%85Docker/" class="post-title-link" itemprop="url">CentOS安装Docker</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-03-10 11:02:33" itemprop="dateCreated datePublished" datetime="2020-03-10T11:02:33+08:00">2020-03-10</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-04 21:47:20" itemprop="dateModified" datetime="2021-08-04T21:47:20+08:00">2021-08-04</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%9C%8D%E5%8A%A1%E5%99%A8/" itemprop="url" rel="index">
-                    <span itemprop="name">服务器</span>
-                  </a>
-                </span>
-                  ，
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%9C%8D%E5%8A%A1%E5%99%A8/Docker/" itemprop="url" rel="index">
-                    <span itemprop="name">Docker</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="os需求">OS需求</h1>
-<ul>
-<li>CentOS 7</li>
-<li>centos-extra必须启用，默认是启用的</li>
-</ul>
-<h1 id="卸载老的版本如果有安装过的">卸载老的版本（如果有安装过的）</h1>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">$ sudo yum remove docker \</span><br><span class="line">                  docker-client \</span><br><span class="line">                  docker-client-latest \</span><br><span class="line">                  docker-common \</span><br><span class="line">                  docker-latest \</span><br><span class="line">                  docker-latest-logrotate \</span><br><span class="line">                  docker-logrotate \</span><br><span class="line">                  docker-engine</span><br></pre></td></tr></table></figure>
-<p>在/var/lib/docker目录中的镜像，容器和网络被保留了，如果不需要也可以将其移除掉
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2020/03/10/%E6%9C%8D%E5%8A%A1%E5%99%A8/Docker/CentOS%E5%AE%89%E8%A3%85Docker/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/01/15/%E6%9C%8D%E5%8A%A1%E5%99%A8/%E6%9C%8D%E5%8A%A1%E8%BD%AF%E4%BB%B6/Redis%E5%AE%89%E8%A3%85%E4%B8%8E%E9%85%8D%E7%BD%AE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpg">
-      <meta itemprop="name" content="张卫">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="张卫的博客">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/01/15/%E6%9C%8D%E5%8A%A1%E5%99%A8/%E6%9C%8D%E5%8A%A1%E8%BD%AF%E4%BB%B6/Redis%E5%AE%89%E8%A3%85%E4%B8%8E%E9%85%8D%E7%BD%AE/" class="post-title-link" itemprop="url">Redis安装与配置</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-01-15 17:15:18" itemprop="dateCreated datePublished" datetime="2020-01-15T17:15:18+08:00">2020-01-15</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-04 21:47:20" itemprop="dateModified" datetime="2021-08-04T21:47:20+08:00">2021-08-04</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%9C%8D%E5%8A%A1%E5%99%A8/" itemprop="url" rel="index">
-                    <span itemprop="name">服务器</span>
-                  </a>
-                </span>
-                  ，
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%9C%8D%E5%8A%A1%E5%99%A8/%E6%9C%8D%E5%8A%A1%E8%BD%AF%E4%BB%B6/" itemprop="url" rel="index">
-                    <span itemprop="name">服务软件</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="安装">安装</h1>
-<h2 id="yum-安装">yum 安装</h2>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">yum info redis  // 查看当前源的redis最新版本信息</span><br><span class="line">yum install redis</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2020/01/15/%E6%9C%8D%E5%8A%A1%E5%99%A8/%E6%9C%8D%E5%8A%A1%E8%BD%AF%E4%BB%B6/Redis%E5%AE%89%E8%A3%85%E4%B8%8E%E9%85%8D%E7%BD%AE/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/12/27/%E6%9C%8D%E5%8A%A1%E5%99%A8/%E6%9C%8D%E5%8A%A1%E8%BD%AF%E4%BB%B6/Git%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%90%AD%E5%BB%BA/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpg">
-      <meta itemprop="name" content="张卫">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="张卫的博客">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/12/27/%E6%9C%8D%E5%8A%A1%E5%99%A8/%E6%9C%8D%E5%8A%A1%E8%BD%AF%E4%BB%B6/Git%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%90%AD%E5%BB%BA/" class="post-title-link" itemprop="url">Git服务器搭建</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-12-27 15:08:26" itemprop="dateCreated datePublished" datetime="2019-12-27T15:08:26+08:00">2019-12-27</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-04 21:47:20" itemprop="dateModified" datetime="2021-08-04T21:47:20+08:00">2021-08-04</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%9C%8D%E5%8A%A1%E5%99%A8/" itemprop="url" rel="index">
-                    <span itemprop="name">服务器</span>
-                  </a>
-                </span>
-                  ，
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%9C%8D%E5%8A%A1%E5%99%A8/%E6%9C%8D%E5%8A%A1%E8%BD%AF%E4%BB%B6/" itemprop="url" rel="index">
-                    <span itemprop="name">服务软件</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="centos安装与配置git">CentOS安装与配置Git</h1>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2019/12/27/%E6%9C%8D%E5%8A%A1%E5%99%A8/%E6%9C%8D%E5%8A%A1%E8%BD%AF%E4%BB%B6/Git%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%90%AD%E5%BB%BA/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/12/09/%E6%9C%8D%E5%8A%A1%E5%99%A8/%E6%9C%8D%E5%8A%A1%E8%BD%AF%E4%BB%B6/nginx%E5%AE%89%E8%A3%85%E4%B8%8E%E9%85%8D%E7%BD%AE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpg">
-      <meta itemprop="name" content="张卫">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="张卫的博客">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/12/09/%E6%9C%8D%E5%8A%A1%E5%99%A8/%E6%9C%8D%E5%8A%A1%E8%BD%AF%E4%BB%B6/nginx%E5%AE%89%E8%A3%85%E4%B8%8E%E9%85%8D%E7%BD%AE/" class="post-title-link" itemprop="url">Nginx安装与配置</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-12-09 00:00:00" itemprop="dateCreated datePublished" datetime="2019-12-09T00:00:00+08:00">2019-12-09</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-08-04 21:50:44" itemprop="dateModified" datetime="2021-08-04T21:50:44+08:00">2021-08-04</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%9C%8D%E5%8A%A1%E5%99%A8/" itemprop="url" rel="index">
-                    <span itemprop="name">服务器</span>
-                  </a>
-                </span>
-                  ，
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%9C%8D%E5%8A%A1%E5%99%A8/%E6%9C%8D%E5%8A%A1%E8%BD%AF%E4%BB%B6/" itemprop="url" rel="index">
-                    <span itemprop="name">服务软件</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="简介">简介</h1>
-<p>Nginx是个web，反向代理, 负载均衡, 邮件代理和HTTP缓存服务器.</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2019/12/09/%E6%9C%8D%E5%8A%A1%E5%99%A8/%E6%9C%8D%E5%8A%A1%E8%BD%AF%E4%BB%B6/nginx%E5%AE%89%E8%A3%85%E4%B8%8E%E9%85%8D%E7%BD%AE/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span>
+    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/3/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1078,7 +1147,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">20</span>
+          <span class="site-state-item-count">27</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1091,7 +1160,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-count">18</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -1141,7 +1210,7 @@
 <div class="copyright">
   
   &copy; 2019 – 
-  <span itemprop="copyrightYear">2021</span>
+  <span itemprop="copyrightYear">2025</span>
   <span class="with-love">
     <i class="fa fa-user"></i>
   </span>
@@ -1151,13 +1220,13 @@
       <i class="fa fa-area-chart"></i>
     </span>
       <span class="post-meta-item-text">站点总字数：</span>
-    <span title="站点总字数">97k</span>
+    <span title="站点总字数">478k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">1:29</span>
+    <span title="站点阅读时长">7:14</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.1
   </div>
