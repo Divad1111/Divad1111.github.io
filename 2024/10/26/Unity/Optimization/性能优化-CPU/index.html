@@ -50,15 +50,15 @@
   };
 </script>
 
-  <meta name="description" content="TODO:分析程序的资源，代码逻辑，渲染逻辑 闪存优化 闪存优化主要关注减少应用程序的存储空间占用和提高加载速度，以下是一些关键策略：  资源压缩：  使用适当的压缩格式（如ETC2、ASTC）来减小纹理大小 压缩音频文件为合适的格式（如MP3、Vorbis） 使用AssetBundle压缩（LZ4或LZMA）  资源管理：  实现按需加载资源 使用Addressable">
+  <meta name="description" content="TODO:分析程序的资源，代码逻辑，渲染逻辑 闪存优化 闪存用于存储游戏数据和资源，包括游戏数据、纹理、音频等。闪存的读写速度比内存慢得多，因此在游戏中，我们需要尽可能地减少闪存的读写次数，以提高游戏的性能。 闪存结构和文件操作流程 在性能优化-基础 中，介绍了相关的基础知识，为了文章的完整性，简单回顾一下。  闪存结构   SOC系统中的闪存一般采用NAND Flash或">
 <meta property="og:type" content="article">
 <meta property="og:title" content="性能优化-CPU">
 <meta property="og:url" content="http://yoursite.com/2024/10/26/Unity/Optimization/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96-CPU/index.html">
 <meta property="og:site_name" content="张卫的博客">
-<meta property="og:description" content="TODO:分析程序的资源，代码逻辑，渲染逻辑 闪存优化 闪存优化主要关注减少应用程序的存储空间占用和提高加载速度，以下是一些关键策略：  资源压缩：  使用适当的压缩格式（如ETC2、ASTC）来减小纹理大小 压缩音频文件为合适的格式（如MP3、Vorbis） 使用AssetBundle压缩（LZ4或LZMA）  资源管理：  实现按需加载资源 使用Addressable">
+<meta property="og:description" content="TODO:分析程序的资源，代码逻辑，渲染逻辑 闪存优化 闪存用于存储游戏数据和资源，包括游戏数据、纹理、音频等。闪存的读写速度比内存慢得多，因此在游戏中，我们需要尽可能地减少闪存的读写次数，以提高游戏的性能。 闪存结构和文件操作流程 在性能优化-基础 中，介绍了相关的基础知识，为了文章的完整性，简单回顾一下。  闪存结构   SOC系统中的闪存一般采用NAND Flash或">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2024-10-26T04:09:28.000Z">
-<meta property="article:modified_time" content="2025-02-24T14:44:07.029Z">
+<meta property="article:modified_time" content="2025-05-25T09:02:48.908Z">
 <meta property="article:author" content="张卫">
 <meta property="article:tag" content="优化">
 <meta name="twitter:card" content="summary">
@@ -222,7 +222,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2025-02-24 22:44:07" itemprop="dateModified" datetime="2025-02-24T22:44:07+08:00">2025-02-24</time>
+                <time title="修改时间：2025-05-25 17:02:48" itemprop="dateModified" datetime="2025-05-25T17:02:48+08:00">2025-05-25</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -247,36 +247,75 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <p>TODO:分析程序的资源，代码逻辑，渲染逻辑</p>
+        <a id="more"></a>
+<p>TODO:分析程序的资源，代码逻辑，渲染逻辑</p>
 <h1 id="闪存优化">闪存优化</h1>
-<p>闪存优化主要关注减少应用程序的存储空间占用和提高加载速度，以下是一些关键策略：</p>
+<p>闪存用于存储游戏数据和资源，包括游戏数据、纹理、音频等。闪存的读写速度比内存慢得多，因此在游戏中，我们需要尽可能地减少闪存的读写次数，以提高游戏的性能。</p>
+<h2 id="闪存结构和文件操作流程">闪存结构和文件操作流程</h2>
+<p>在<a
+href="https://www.zhangwei.press/2024/04/24/Unity/Optimization/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96-%E5%9F%BA%E7%A1%80/">性能优化-基础</a>
+中，介绍了相关的基础知识，为了文章的完整性，简单回顾一下。</p>
 <ol type="1">
-<li><strong>资源压缩</strong>：
-<ul>
-<li>使用适当的压缩格式（如ETC2、ASTC）来减小纹理大小</li>
-<li>压缩音频文件为合适的格式（如MP3、Vorbis）</li>
-<li>使用AssetBundle压缩（LZ4或LZMA）</li>
-</ul></li>
-<li><strong>资源管理</strong>：
-<ul>
-<li>实现按需加载资源</li>
-<li>使用Addressables系统进行资源管理</li>
-<li>及时卸载不再使用的资源</li>
-</ul></li>
-<li><strong>代码优化</strong>：
-<ul>
-<li>移除未使用的代码和资源</li>
-<li>使用IL2CPP进行代码优化</li>
-<li>启用代码剥离（Code Stripping）</li>
-</ul></li>
-<li><strong>构建优化</strong>：
-<ul>
-<li>使用合适的构建目标（如ARM64）</li>
-<li>启用Managed Stripping Level</li>
-<li>优化Player Settings中的设置</li>
-</ul></li>
+<li>闪存结构</li>
 </ol>
-<a id="more"></a>
+<ul>
+<li>SOC系统中的闪存一般采用NAND Flash或NOR
+Flash，作为非易失性存储器，用于存储操作系统、应用程序、资源文件等。</li>
+<li>闪存通过总线（如SPI、eMMC、UFS等）与SOC主控芯片连接。</li>
+</ul>
+<ol start="2" type="1">
+<li>文件读写流程</li>
+</ol>
+<ul>
+<li><p><strong>文件读取：</strong></p>
+<ol type="1">
+<li>CPU发起文件读取请求，操作系统通过文件系统（如FAT、EXT4等）定位文件在闪存中的物理地址。</li>
+<li>文件系统驱动将读取命令通过总线发送到闪存控制器。</li>
+<li>闪存控制器根据地址从闪存芯片中读取数据，经过总线传输到SOC的内存（RAM）中。</li>
+<li>CPU从内存中获取数据进行处理。</li>
+</ol></li>
+<li><p><strong>文件写入：</strong></p>
+<ol type="1">
+<li>CPU将需要写入的数据放入内存缓冲区。</li>
+<li>操作系统通过文件系统分配闪存空间，并生成写入命令。</li>
+<li>写入命令和数据通过总线传递给闪存控制器。</li>
+<li>闪存控制器将数据写入指定的闪存地址。</li>
+<li>写入完成后，文件系统更新元数据，保证数据一致性。</li>
+</ol></li>
+<li><p><strong>应用层API：</strong></p>
+<ol type="1">
+<li>fopen, fread, fwrite,
+fclose等函数封装了文件操作的底层细节，但最终都是调用到操作系统API。</li>
+<li>也可以使用内存映射的方式，将文件映射到内存中，直接操作内存，避免了文件直接调用API读取的过程,
+映射后可以直接操作指针的方式读取和写入内存。</li>
+</ol></li>
+</ul>
+<h2 id="序列化serialization">序列化（Serialization）</h2>
+<h3 id="序列化的概念">序列化的概念</h3>
+<p>Unity
+的序列化（Serialization）体系分为编辑器写盘阶段和运行时读盘阶段，它同时支持
+二进制格式（Binary SerializedFile）和
+文本（YAML）格式。编辑器在构建场景、AssetBundle
+或玩家（Player）时，将所有 UnityEngine.Object 派生的对象及其字段按照
+“Type Tree + 对象数据” 的方式写入磁盘；运行时则根据磁盘上的 Type Tree
+快速定位并重构内存中的 C++ 对象，并通过隐藏指针 m_CachedPtr
+将之挂载到对应的 C# 托管对象上。二进制格式在读写时采用专门的 C++
+引擎代码和内存拷贝技术，支持内存映射 (.resS/.resource)
+与多线程解压，是极高效的；而文本（YAML）格式则使用文本解析器和反射，仅在编辑器中针对小规模场景或开启
+“Force Text” 时使用</p>
+<h3 id="序列化数据结构">序列化数据结构</h3>
+<h3 id="assetbundle">AssetBundle</h3>
+<p>AssetBundle
+是一个各种资源序列化后的集合，包括脚本、纹理、模型、音频等资源。 ####
+AssetBundle文件结构</p>
+<h4 id="assetbundle打包流程">AssetBundle打包流程</h4>
+<h4 id="assetbundle加载流程">AssetBundle加载流程</h4>
+<h4 id="assetbundle卸载流程">AssetBundle卸载流程</h4>
+<h3 id="addressables">Addressables</h3>
+<h3 id="resources">Resources</h3>
+<h3 id="streamingassets">StreamingAssets</h3>
+<h3 id="assetdatabase">AssetDatabase</h3>
+<h2 id="常用资源">常用资源</h2>
 <h1 id="内存优化">内存优化</h1>
 <h1 id="代码优化cpu时间">代码优化(CPU时间)</h1>
 <h1 id="渲染优化cpu端">渲染优化（CPU端）</h1>
@@ -353,7 +392,7 @@ Manual</a></li>
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#闪存优化"><span class="nav-number">1.</span> <span class="nav-text">闪存优化</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#内存优化"><span class="nav-number">2.</span> <span class="nav-text">内存优化</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#代码优化cpu时间"><span class="nav-number">3.</span> <span class="nav-text">代码优化(CPU时间)</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#渲染优化cpu端"><span class="nav-number">4.</span> <span class="nav-text">渲染优化（CPU端）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#网络优化"><span class="nav-number">5.</span> <span class="nav-text">网络优化</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">6.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考"><span class="nav-number">7.</span> <span class="nav-text">参考</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#闪存优化"><span class="nav-number">1.</span> <span class="nav-text">闪存优化</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#闪存结构和文件操作流程"><span class="nav-number">1.1.</span> <span class="nav-text">闪存结构和文件操作流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#序列化serialization"><span class="nav-number">1.2.</span> <span class="nav-text">序列化（Serialization）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#序列化的概念"><span class="nav-number">1.2.1.</span> <span class="nav-text">序列化的概念</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#序列化数据结构"><span class="nav-number">1.2.2.</span> <span class="nav-text">序列化数据结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#assetbundle"><span class="nav-number">1.2.3.</span> <span class="nav-text">AssetBundle</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#assetbundle打包流程"><span class="nav-number">1.2.3.1.</span> <span class="nav-text">AssetBundle打包流程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#assetbundle加载流程"><span class="nav-number">1.2.3.2.</span> <span class="nav-text">AssetBundle加载流程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#assetbundle卸载流程"><span class="nav-number">1.2.3.3.</span> <span class="nav-text">AssetBundle卸载流程</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#addressables"><span class="nav-number">1.2.4.</span> <span class="nav-text">Addressables</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#resources"><span class="nav-number">1.2.5.</span> <span class="nav-text">Resources</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#streamingassets"><span class="nav-number">1.2.6.</span> <span class="nav-text">StreamingAssets</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#assetdatabase"><span class="nav-number">1.2.7.</span> <span class="nav-text">AssetDatabase</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#常用资源"><span class="nav-number">1.3.</span> <span class="nav-text">常用资源</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#内存优化"><span class="nav-number">2.</span> <span class="nav-text">内存优化</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#代码优化cpu时间"><span class="nav-number">3.</span> <span class="nav-text">代码优化(CPU时间)</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#渲染优化cpu端"><span class="nav-number">4.</span> <span class="nav-text">渲染优化（CPU端）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#网络优化"><span class="nav-number">5.</span> <span class="nav-text">网络优化</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">6.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考"><span class="nav-number">7.</span> <span class="nav-text">参考</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -369,20 +408,20 @@ Manual</a></li>
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">29</span>
+          <span class="site-state-item-count">30</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-count">12</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-count">19</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -442,13 +481,13 @@ Manual</a></li>
       <i class="fa fa-area-chart"></i>
     </span>
       <span class="post-meta-item-text">站点总字数：</span>
-    <span title="站点总字数">488k</span>
+    <span title="站点总字数">506k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">7:24</span>
+    <span title="站点阅读时长">7:40</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.1
   </div>
