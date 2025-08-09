@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="UE5启动流程与结构解析 一、引擎启动流程详解 1.1 启动入口与平台特化 在 Windows 平台上，Unreal Engine 5 的执行始于标准 GUI 程序入口 WinMain。该入口函数首先调用平台特化的 LaunchWindowsStartup（位于 LaunchWindows.cpp），随后进入通用的跨平台启动函数 GuardedMain（定义于 Launch.cpp）。其调用链条如">
+<meta property="og:type" content="article">
+<meta property="og:title" content="UE5启动流程与结构解析">
+<meta property="og:url" content="http://yoursite.com/2025/05/19/UE5/UE5%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E4%B8%8E%E7%BB%93%E6%9E%84%E8%A7%A3%E6%9E%90/index.html">
+<meta property="og:site_name" content="张卫的博客">
+<meta property="og:description" content="UE5启动流程与结构解析 一、引擎启动流程详解 1.1 启动入口与平台特化 在 Windows 平台上，Unreal Engine 5 的执行始于标准 GUI 程序入口 WinMain。该入口函数首先调用平台特化的 LaunchWindowsStartup（位于 LaunchWindows.cpp），随后进入通用的跨平台启动函数 GuardedMain（定义于 Launch.cpp）。其调用链条如">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-05-19T12:04:05.000Z">
+<meta property="article:modified_time" content="2025-08-09T13:53:01.077Z">
+<meta property="article:author" content="张卫">
+<meta property="article:tag" content="UE5">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://yoursite.com/2025/05/19/UE5/UE5%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E4%B8%8E%E7%BB%93%E6%9E%84%E8%A7%A3%E6%9E%90/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>UE5启动流程与结构解析 | 张卫的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">张卫的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">Done is better than perfect</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2025/05/19/UE5/UE5%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E4%B8%8E%E7%BB%93%E6%9E%84%E8%A7%A3%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          UE5启动流程与结构解析
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2025-05-19 20:04:05" itemprop="dateCreated datePublished" datetime="2025-05-19T20:04:05+08:00">2025-05-19</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2025-08-09 21:53:01" itemprop="dateModified" datetime="2025-08-09T21:53:01+08:00">2025-08-09</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/UE5/" itemprop="url" rel="index">
+                    <span itemprop="name">UE5</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="ue5启动流程与结构解析">UE5启动流程与结构解析</h1>
+<h2 id="一引擎启动流程详解">一、引擎启动流程详解</h2>
+<h3 id="启动入口与平台特化">1.1 启动入口与平台特化</h3>
+<p>在 Windows 平台上，Unreal Engine 5 的执行始于标准 GUI 程序入口
+<code>WinMain</code>。该入口函数首先调用平台特化的
+<code>LaunchWindowsStartup</code>（位于
+<code>LaunchWindows.cpp</code>），随后进入通用的跨平台启动函数
+<code>GuardedMain</code>（定义于
+<code>Launch.cpp</code>）。其调用链条如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">WinMain → LaunchWindowsStartup → GuardedMainWrapper → GuardedMain → EnginePreInit → FEngineLoop::PreInit → FEngineLoop::PreInitPreStartupScreen</span><br></pre></td></tr></table></figure>
+<a id="more"></a>
+<h3 id="guardedmain-函数结构">1.2 GuardedMain 函数结构</h3>
+<p><code>GuardedMain</code>
+函数作为整个引擎生命周期的主控流程，其主要职责包括平台抽象层初始化、引擎子系统注册、核心模块加载、主循环驱动以及资源清理。简化伪代码如下：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">GuardedMain(<span class="keyword">const</span> TCHAR* CmdLine)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 初始化阶段</span></span><br><span class="line">    EnginePreInit();</span><br><span class="line">    EngineInit();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 主执行循环</span></span><br><span class="line">    <span class="keyword">while</span> (!IsEngineExitRequested())</span><br><span class="line">    &#123;</span><br><span class="line">        EngineTick();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 引擎析构与清理</span></span><br><span class="line">    EngineExit();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="初始化子系统分层解析">1.3 初始化子系统分层解析</h3>
+<ul>
+<li><strong>命令行与环境配置</strong>：通过 <code>FCommandLine</code>
+解析参数，初始化全局环境变量如
+<code>GIsEditor</code>、<code>GIsClient</code>。</li>
+<li><strong>平台与IO子系统</strong>：包括
+<code>FPlatformFileManager</code>
+构建虚拟文件系统层，配置加载器（<code>GConfig</code>）以及多日志通道日志器（<code>GLog</code>）。</li>
+<li><strong>模块加载与引擎实例化</strong>：<code>FEngineLoop::PreInit</code>
+会加载核心运行时模块（如 Core、CoreUObject、Engine），随后
+<code>FEngineLoop::Init</code> 生成 <code>UEngine</code> 或
+<code>UEditorEngine</code> 实例。</li>
+<li><strong>世界初始化</strong>：通过 <code>UEngine::Start()</code>
+加载默认世界并生成 <code>UWorld</code> 实例，注册
+<code>GameMode</code>、<code>PlayerController</code>
+等运行时关键对象。</li>
+</ul>
+<h3 id="模式差异化执行路径">1.4 模式差异化执行路径</h3>
+<ul>
+<li><strong>编辑器模式</strong>：实例化 <code>UEditorEngine</code>，加载
+Slate 编辑器模块和各种工具集。</li>
+<li><strong>独立运行模式</strong>：使用
+<code>UGameEngine</code>，仅保留运行时必要模块，避免加载额外编辑器负担。</li>
+</ul>
+<h3 id="原生窗口创建与生命周期管理">1.5 原生窗口创建与生命周期管理</h3>
+<p>Unreal Engine 在 Windows 平台下使用 Win32
+原生窗口进行渲染上下文承载和消息收集，其生命周期管理如下：</p>
+<ul>
+<li><p><strong>创建时机</strong>：在
+<code>FWindowsPlatformApplicationMisc::InitializeWindow()</code>（位于
+<code>WindowsApplication.cpp</code>）被调用时创建原生窗口。该函数在
+<code>FEngineLoop::Init()</code>
+完成渲染器初始化（RHI）后执行。具体过程包括：</p>
+<ol type="1">
+<li>准备窗口类（<code>WNDCLASSEX</code>）并注册到系统。</li>
+<li>调用 <code>CreateWindowEx</code> 或 <code>CreateWindowW</code>
+创建窗口句柄（<code>HWND</code>）。</li>
+</ol></li>
+<li><p><strong>更新机制</strong>：主循环内调用
+<code>FWindowsApplication::PumpMessages()</code> 轮询 Win32
+消息队列，通过 <code>PeekMessage</code>/<code>GetMessage</code>
+接收消息；再在 <code>TranslateMessage</code> 与
+<code>DispatchMessage</code> 后，Win32 调用窗口过程
+<code>WndProc</code>，进一步路由到
+<code>FWindowsApplication::ProcessMessage()</code>。</p></li>
+<li><p><strong>交换链与渲染上下文</strong>：与原生窗口关联的 RHI
+交换链（DX11/DX12/Vulkan SwapChain）在窗口创建后初始化，并在每帧通过
+<code>SwapBuffers</code> 或 <code>Present</code>
+交换前后缓冲区。</p></li>
+<li><p><strong>销毁时机</strong>：当引擎接收到退出请求后，<code>FWindowsApplication::DestroyWindows()</code>
+会依次遍历所有 <code>HWND</code>，调用 <code>DestroyWindow</code>
+释放窗口资源；随后在 <code>GuardedMain</code> 的退出阶段调用
+<code>UnregisterClass</code> 注销窗口类。</p></li>
+</ul>
+<h3 id="原生窗口与渲染管线关联">1.6 原生窗口与渲染管线关联</h3>
+<p>为了将 Win32 窗口与 GPU 渲染流程绑定，Unreal Engine 在 RHI
+初始化阶段执行以下关键步骤：</p>
+<ol type="1">
+<li><strong>创建渲染设备与命令队列</strong>：在
+<code>PlatformCreateDynamicRHI()</code>（如 <code>D3D12RHI.cpp</code>
+中）调用 <code>D3D12CreateDevice</code> 创建
+<code>ID3D12Device</code>，并初始化图形和显示命令队列（<code>ID3D12CommandQueue</code>）。</li>
+<li><strong>窗口与交换链关联</strong>：随后调用
+<code>IDXGIFactory::CreateSwapChainForHwnd</code>（封装在
+<code>D3D12RHI::CreateSwapChain()</code>）并传入之前创建的
+<code>HWND</code> 与命令队列，生成 <code>IDXGISwapChain3</code>
+对象。该交换链会管理前后缓冲区并负责与窗口表面同步。</li>
+<li><strong>渲染目标视图（RTV）绑定</strong>：在交换链创建后，RHI
+会为每个缓冲区调用 <code>CreateRenderTargetView</code>（RTV），并在每帧
+<code>RHIPresent</code> 时使用 <code>OMSetRenderTargets</code> 将 RTV
+绑定到管线输出合并阶段。</li>
+<li><strong>帧呈现</strong>：每次 <code>RHIPresent</code> 调用时，通过
+<code>IDXGISwapChain3::Present</code>
+将渲染完成的后缓冲区呈现到原生窗口。</li>
+</ol>
+<p>这样，游戏逻辑和 Slate 渲染均可通过 RHI 层透明地提交命令到与
+<code>HWND</code> 绑定的交换链，实现最终画面输出。</p>
+<h2 id="二模块化架构与加载机制">二、模块化架构与加载机制</h2>
+<h3 id="模块生命周期管理器-fmodulemanager">2.1 模块生命周期管理器
+FModuleManager</h3>
+<p><code>FModuleManager</code>
+为模块化架构的核心调度器，负责模块的动态解析、生命周期控制与实例缓存。其提供以下能力：</p>
+<ul>
+<li>加载：<code>LoadModule()</code>,
+<code>LoadModuleWithFailureReason()</code></li>
+<li>卸载：<code>UnloadModule()</code></li>
+<li>访问：<code>GetModule()</code>, <code>IsModuleLoaded()</code></li>
+</ul>
+<p>模块以 <code>IMPLEMENT_MODULE</code> 宏形式注册，启动时触发
+<code>StartupModule()</code>，终止时调用
+<code>ShutdownModule()</code>。</p>
+<h3 id="模块元描述与阶段控制">2.2 模块元描述与阶段控制</h3>
+<p>模块的描述由 <code>FModuleDescriptor</code> 承载，定义于
+<code>.uproject</code> 或 <code>.uplugin</code>
+配置文件中，其关键字段如下：</p>
+<ul>
+<li><code>Name</code>：模块唯一标识</li>
+<li><code>Type</code>：模块分类（Runtime、Editor、Developer 等）</li>
+<li><code>LoadingPhase</code>：加载时机（PreDefault、Default、PostEngineInit
+等）</li>
+</ul>
+<p>引擎启动阶段通过 <code>LoadModulesForPhase()</code>
+自动分阶段解析和装配模块。</p>
+<h3 id="静态与动态模块机制对比">2.3 静态与动态模块机制对比</h3>
+<ul>
+<li><strong>静态模块</strong>：构建时链接进可执行文件，通过
+<code>StaticallyLinkedModuleInitializers</code> 注册初始化函数。</li>
+<li><strong>动态模块（DLL）</strong>：运行时使用
+<code>FPlatformProcess::GetDllHandle()</code> 加载，调用
+<code>GetDllExport()</code> 提取 <code>InitializeModule()</code>
+等符号以完成动态注册。</li>
+</ul>
+<p>模块卸载遵循逆序清理原则，保障依赖顺序的一致性与资源完整回收。</p>
+<h3 id="模块加载与调用流程">2.4 模块加载与调用流程</h3>
+<p>在引擎启动阶段，以及运行时需要动态引入或卸载功能时，Unreal Engine
+依赖 FModuleManager
+结合项目和插件描述完成模块的发现、加载、初始化及调用。</p>
+<h4 id="模块发现与注册">2.4.1 模块发现与注册</h4>
+<ul>
+<li><strong>启动时扫描</strong>：引擎启动时，FProjectManager 和
+FPluginManager 分别读取 <code>.uproject</code>、<code>.uplugin</code>
+中的 FModuleDescriptor 列表，并将所有声明的模块按 LoadingPhase
+分组。</li>
+<li><strong>静态注册</strong>：对于单片（Monolithic）构建模式，所有模块在编译时通过
+IMPLEMENT_MODULE 宏将初始化委托注册到 StaticallyLinkedModuleInitializers
+映射中；插件和项目模块也以同样方式嵌入可执行文件或主 DLL。</li>
+</ul>
+<h4 id="动态加载流程">2.4.2 动态加载流程</h4>
+<ol type="1">
+<li><p>调用 LoadModulesForPhase(Phase) 时，FModuleManager 枚举本阶段所有
+FModuleDescriptor。</p></li>
+<li><p>对于每个模块名，FModuleManager::LoadModuleWithFailureReason：</p>
+<ul>
+<li>若为静态模块，直接从 StaticallyLinkedModuleInitializers
+调用委托，返回 IModuleInterface 实例。</li>
+<li>若为动态模块，使用 FPlatformProcess::GetDllHandle
+在预定义路径（Engine、Project、Plugin 二进制目录）加载对应 DLL；再通过
+GetDllExport 查找符号 "InitializeModule"，执行返回的新模块实例。</li>
+</ul></li>
+<li><p>将生成的 IModuleInterface 指针保存在 ModuleNameToInfo 映射，调用
+StartupModule() 完成模块自身初始化逻辑。</p></li>
+<li><p>广播 ModulesChangedEvent 通知其他子系统，如 UObject
+加载器，注册由模块提供的类或服务。</p></li>
+</ol>
+<h4 id="引擎对模块的调用">2.4.3 引擎对模块的调用</h4>
+<ul>
+<li><strong>接口查询</strong>：运行时代码可通过
+FModuleManager::Get().GetModuleChecked(ModuleName)
+获得已加载模块的接口引用。</li>
+<li><strong>服务注入</strong>：模块通常在 StartupModule
+中向全局子系统注册服务（如渲染模块注册渲染工厂，网络模块注册网络驱动），引擎通过静态或虚函数调用这些接口完成对应功能。</li>
+<li><strong>生命周期管理</strong>：当模块完成其职责或需要热重载时，调用
+UnloadModule(ModuleName) 会按逆序调用 ShutdownModule()，并释放 DLL
+句柄。</li>
+</ul>
+<h4 id="热重载支持">2.4.4 热重载支持</h4>
+<ul>
+<li>编辑器模式和某些运行时插件支持 Hot
+Reload：在源码或插件代码修改后，调用 LiveCoding 或 RecompileInEditor
+可以卸载旧模块并重命名加载新 DLL，FModuleManager
+确保在重载前调用所有模块的 ShutdownModule，再重新执行加载和
+StartupModule 过程。</li>
+</ul>
+<h2 id="三引擎主循环机制剖析">三、引擎主循环机制剖析</h2>
+<p>主循环逻辑位于 <code>FEngineLoop::Tick()</code>，该函数被
+<code>GuardedMain</code>
+持续调用，驱动引擎完成一帧游戏更新。其核心逻辑结构如下：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span> (!IsEngineExitRequested())</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 处理窗口消息</span></span><br><span class="line">    FPlatformApplicationMisc::PumpMessages(<span class="literal">true</span>);</span><br><span class="line"></span><br><span class="line">   <span class="comment">// 主游戏引擎tick (world, game objects, etc.)</span></span><br><span class="line">   GEngine-&gt;Tick(FApp::GetDeltaTime(), bIdleMode);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="各子阶段功能拆解">3.1 各子阶段功能拆解</h3>
+<ul>
+<li><strong>世界 Tick</strong>：依序更新每个 <code>UWorld</code>
+实例，包括其内部所有 <code>AActor</code> 和组件。</li>
+<li><strong>子系统更新</strong>：物理仿真、动画控制器、AI
+系统、音频引擎、GC 系统等依照特定顺序被调度。</li>
+</ul>
+<p>在编辑器模式下，还需驱动多视口、多编辑器对象
+Tick，进一步增加主循环复杂度。</p>
+<h2 id="四核心运行时对象结构">四、核心运行时对象结构</h2>
+<h3 id="uworld多子系统集成容器">4.1 UWorld：多子系统集成容器</h3>
+<p><code>UWorld</code> 是游戏世界的运行时表示，其核心职责包含：</p>
+<ul>
+<li>管理 <code>ULevel</code> 和动态加载的 Streaming Levels</li>
+<li>管理所有 <code>AActor</code> 实例的生命周期与调度</li>
+<li>提供时间流控制（World Time、DeltaTime、Pause 等）</li>
+<li>持有所有关键子系统的引用，如
+<code>UPhysicsScene</code>、<code>UNavigationSystemV1</code>、<code>UAIController</code>
+等</li>
+<li>关联
+<code>AGameModeBase</code>、<code>APlayerController</code>、<code>AGameState</code>
+等游戏规则对象</li>
+</ul>
+<p>其结构设计支持多个世界并行存在。</p>
+<h3 id="aactor游戏对象原语单元">4.2 AActor：游戏对象原语单元</h3>
+<p><code>AActor</code>
+是所有可交互、可放置、可网络同步实体的基类。其设计支持以下关键能力：</p>
+<ul>
+<li>空间坐标系定义（Transform）</li>
+<li>Tick 生命周期方法：<code>BeginPlay()</code> → <code>Tick()</code> →
+<code>EndPlay()</code></li>
+<li>支持组件组合系统，通过 <code>UActorComponent</code>
+实现功能模块化</li>
+<li>支持网络属性同步与远程函数调用（RPC）机制</li>
+<li>支持蓝图与 C++ 混合开发与扩展</li>
+</ul>
+<p>常见子类如
+<code>APawn</code>、<code>ACharacter</code>、<code>AStaticMeshActor</code>
+等均继承自 <code>AActor</code>。</p>
+<h3 id="组件化与解耦设计">4.3 组件化与解耦设计</h3>
+<ul>
+<li><strong>UActorComponent</strong> 是功能原子单元，可被多个 Actor
+复用</li>
+<li><strong>SceneComponent</strong> 派生类（如
+Mesh、Camera、Light）具备空间信息</li>
+<li>支持运行时动态添加、编辑器中组合，可提高模块内聚性与解耦能力</li>
+</ul>
+<p>组件体系提升了可扩展性、降低逻辑冗余并促进代码复用，是 UE
+面向数据驱动设计的重要体现。</p>
+<h2 id="五外部输入处理机制windows-平台">五、外部输入处理机制（Windows
+平台）</h2>
+<h3 id="平台消息获取与分发">5.1 平台消息获取与分发</h3>
+<p>在 Windows 平台上，引擎通过 Win32 API 接口获取原生消息队列事件（如
+<code>WM_MOUSEMOVE</code>, <code>WM_LBUTTONDOWN</code>,
+<code>WM_KEYDOWN</code>, <code>WM_INPUT</code>
+等）。<code>FWindowsApplication::PumpMessages()</code> 会在主循环中调用
+<code>TranslateMessage</code> 与 <code>DispatchMessage</code>，并在
+<code>WndProc</code> 中将消息转发给
+<code>FWindowsApplication::ProcessMessage()</code>。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">MSG Msg;</span><br><span class="line"><span class="keyword">while</span> (PeekMessage(&amp;Msg, <span class="literal">NULL</span>, <span class="number">0</span>, <span class="number">0</span>, PM_REMOVE))</span><br><span class="line">&#123;</span><br><span class="line">    TranslateMessage(&amp;Msg);</span><br><span class="line">    DispatchMessage(&amp;Msg);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="消息处理与转换">5.2 消息处理与转换</h3>
+<p><code>ProcessMessage(HWND Window, uint32 Message, WPARAM wParam, LPARAM lParam)</code>
+会根据消息类型调用对应的处理函数，例如：</p>
+<ul>
+<li>鼠标事件：<code>ProcessMouseButtonDown/Up</code>,
+<code>ProcessMouseMove</code>, <code>ProcessMouseWheel</code>。</li>
+<li>键盘事件：<code>ProcessKeyDown/Up</code>,
+<code>ProcessKeyChar</code>。</li>
+<li>原始输入（Raw Input）：<code>WM_INPUT</code>
+对触摸、手柄等应用多平台统一处理。</li>
+</ul>
+<p>每个处理函数会构建对应的 Slate 事件对象（<code>FPointerEvent</code>,
+<code>FKeyEvent</code>）并调用
+<code>MessageHandler-&gt;OnMouseButtonDown()</code> 或
+<code>OnKeyDown()</code> 等接口。</p>
+<h3 id="slate-层事件分发">5.3 Slate 层事件分发</h3>
+<p><code>FSlateApplication</code> 作为统一 UI 框架入口，通过
+<code>FSlateApplication::ProcessDeferredEvents()</code>
+聚合并投递从平台层上报的事件。事件处理流：</p>
+<ol type="1">
+<li>平台层产生的原始事件通过
+<code>FGenericApplicationMessageHandler</code> 回调注册到 Slate。</li>
+<li><code>FSlateApplication::PumpMessages()</code> 中调用
+<code>ProcessMessageQueue()</code>，将消息排入 Slate 内部队列。</li>
+<li>在 <code>FSlateApplication::Tick()</code> 阶段，遍历事件队列，调用
+<code>RoutePointerEvent</code> 或
+<code>RouteKeyEvent</code>，将事件分发给焦点窗口和对应 Widget。</li>
+</ol>
+<h3 id="引擎输入子系统">5.4 引擎输入子系统</h3>
+<p>Slate 处理完 UI
+输入后，会根据配置将输入路由至引擎输入子系统（<code>UPlayerInput</code>），生成
+<code>FInputKey</code>, <code>FInputAxis</code> 或
+<code>FInputTouch</code> 数据。主要流程：</p>
+<ol type="1">
+<li><code>FSlateApplication</code> 调用
+<code>FInputProcessorSlate::ProcessKeyDownEvent</code>
+或对应方法，将键盘/鼠标事件转为 <code>UPlayerInput</code> 的调用。</li>
+<li><code>UPlayerInput</code> 根据项目 <code>DefaultInput.ini</code>
+中的映射，将物理键或控制器按钮映射为游戏内抽象的输入动作（动作）与轴（Axis）。</li>
+<li><code>APlayerController::InputKey</code> 或 <code>InputAxis</code>
+接收这些事件，进一步调用绑定到 Actor 的 <code>UInputComponent</code>
+中的委托。</li>
+</ol>
+<h3 id="控制器与触摸支持">5.5 控制器与触摸支持</h3>
+<ul>
+<li><strong>控制器</strong>：Windows 使用
+XInput（<code>WindowsApplication.cpp</code> 中的
+<code>FWindowsControllerInterface</code>）轮询手柄状态，产生
+<code>FControllerState</code> 并转为 <code>FInputKey</code>。</li>
+<li><strong>触摸屏</strong>：触摸事件通过 Win32 的触摸输入
+API（<code>WM_TOUCH</code>），并在 <code>ProcessMessage</code> 中解析为
+<code>FPointerEvent</code>，最终传递给 Slate。</li>
+</ul>
+<h3 id="整体事件流示意">5.6 整体事件流示意</h3>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">Win32 Message Queue</span><br><span class="line">   ↓ (TranslateMessage&#x2F;DispatchMessage)</span><br><span class="line">FWindowsApplication::ProcessMessage</span><br><span class="line">   ↓ (构建 FPointerEvent&#x2F;FKeyEvent)</span><br><span class="line">FGenericApplicationMessageHandler → FSlateApplication</span><br><span class="line">   ↓ (Slate 内部队列)</span><br><span class="line">FSlateApplication::Tick()</span><br><span class="line">   ↓ (RoutePointerEvent&#x2F;RouteKeyEvent)</span><br><span class="line">焦点 Widget + Active Window</span><br><span class="line">   ↓ (UI 处理完成)</span><br><span class="line">FInputProcessorSlate → UPlayerInput</span><br><span class="line">   ↓ (映射 动作&#x2F;Axis)</span><br><span class="line">APlayerController → UInputComponent → Actor</span><br></pre></td></tr></table></figure>
+<h2 id="六主要ue5模块概览">六、主要UE5模块概览</h2>
+<p>在整体架构中，UE5
+由若干基础模块和功能模块组成，每个模块在引擎启动和运行时通过
+FModuleManager
+驱动加载，并在引擎生命周期内被相应子系统调用。以下为关键模块及其设计结构、核心职责和驱动方式：</p>
+<h3 id="核心基础模块">6.1 核心基础模块</h3>
+<ul>
+<li><strong>Core</strong>：提供跨平台底层功能，包括内存管理、字符串与容器模板、文件系统接口。以静态方式链接，最先被加载，由
+<code>FEngineLoop::PreInit</code> 驱动。</li>
+<li><strong>CoreUObject</strong>：UObject
+系统与反射框架实现，管理对象生命周期、序列化与垃圾回收。通过静态注册委托加载，StartupModule
+中初始化反射元数据。</li>
+</ul>
+<h3 id="引擎功能模块">6.2 引擎功能模块</h3>
+<ul>
+<li><strong>Engine</strong>：GameFramework
+核心，管理世界（UWorld）、GameMode、Actor 生命周期和场景更新。依赖
+CoreUObject，在 PreDefault 阶段加载，StartupModule 注册世界管理器。</li>
+<li><strong>RenderCore</strong>：封装渲染流水线基础接口，如命令缓冲、资源管理。作为渲染子系统前置模块，在
+Default 阶段加载，渲染线程启动时被绑定。</li>
+<li><strong>RHI</strong>：渲染硬件抽象层，提供对 DirectX、Vulkan、Metal
+等后端的统一接口。动态模块，根据平台在 Default
+阶段载入，渲染初始化流程中调用 <code>CreateRHI</code>。</li>
+</ul>
+<h3 id="ui-与输入模块">6.3 UI 与输入模块</h3>
+<ul>
+<li><strong>SlateCore</strong>：Defines 基本 UI
+树结构、事件处理和布局算法。作为静态模块在 PreDefault 阶段加载，由
+FSlateApplication 实例驱动。</li>
+<li><strong>Slate</strong>：UI 渲染与绘制实现，依赖 SlateCore 和 RHI，在
+PostEngineInit 阶段加载，StartupModule 中注册渲染器。</li>
+<li><strong>UMG (UMGEditor)</strong>：基于 Slate 的可视化 UI
+编辑与运行时模块，Editor 版在 Editor 阶段加载，Runtime 版在 Default
+阶段加载，由 WidgetReflector 驱动。</li>
+<li><strong>InputCore</strong>：定义键位与轴映射基础数据结构。静态加载，<code>UPlayerInput</code>
+在世界 Tick 前自动初始化并回调映射。</li>
+</ul>
+<h3 id="网络与游戏系统模块">6.4 网络与游戏系统模块</h3>
+<ul>
+<li><strong>Networking</strong>：核心网络协议与封包实现（Sockets、LowLevelNet）。动态模块，Default
+阶段加载，在 <code>NetDriver</code> 初始化时被调用。</li>
+<li><strong>OnlineSubsystem</strong>：平台在线服务接口（如 Steam、Epic
+Online Services）。插件形态，运行时根据配置载入，对应子系统在
+<code>WorldInit</code> 时注册服务。</li>
+<li><strong>GameplayAbility</strong>：提供技能（Ability）与效果（Effect）系统框架。模块在
+PostDefault 阶段加载，StartupModule 中注册
+<code>UAbilitySystemComponent</code> 工厂，GameMode 或 Actor
+在构造时创建组件实例。</li>
+</ul>
+<h3 id="工具与扩展模块">6.5 工具与扩展模块</h3>
+<ul>
+<li><strong>Editor</strong>：编辑器核心功能集合，在 Editor
+阶段加载，为编辑器注入菜单、工具窗口与自定义命令。</li>
+<li><strong>BlueprintGraph</strong>：蓝图可视化脚本支持，Editor
+模式下加载，由蓝图编译器和可视化编辑器驱动。</li>
+<li><strong>LiveCoding</strong>：支持热重载的模块，运行时监听文件变化，在插件重载流程中被
+FModuleManager 调用 ShutdownModule 和 StartupModule。</li>
+</ul>
+<hr />
+<h2 id="七ue5-多线程架构">七、UE5 多线程架构</h2>
+<p>UE5
+在运行时启动时，会创建多个专职线程来处理不同的子系统，以保证性能与资源利用。以下是主要线程的创建、更新与销毁位置及职责说明：</p>
+<h3 id="主要线程列表">7.1 主要线程列表</h3>
+<ul>
+<li><strong>游戏主线程 (Game Thread)</strong></li>
+<li><strong>渲染线程 (Render Thread)</strong></li>
+<li><strong>RHI 线程 (RHI Thread)</strong></li>
+<li><strong>任务图线程 (Task Graph Threads)</strong></li>
+<li><strong>异步加载线程 (Async Loading Thread)</strong></li>
+<li><strong>额外子系统线程</strong>（物理、音频等）</li>
+</ul>
+<h3 id="游戏主线程">7.2 游戏主线程</h3>
+<ul>
+<li><strong>创建时机</strong>：在 <code>GuardedMain</code>
+内启动后，即进入 <code>FEngineLoop::Init</code>
+后恢复到主线程上下文。</li>
+<li><strong>更新</strong>：每帧由 <code>FEngineLoop::Tick()</code>
+驱动，处理游戏逻辑、UWorld Tick、Actor Tick 等。</li>
+<li><strong>销毁</strong>：当 <code>IsEngineExitRequested()</code>
+为真退出主循环后，主线程在 <code>GuardedMain</code> 中执行
+<code>EngineExit</code> 清理并终止进程。</li>
+</ul>
+<h3 id="渲染线程">7.3 渲染线程</h3>
+<ul>
+<li><strong>创建时机</strong>：在 RHI 初始化阶段（如
+<code>D3D12DynamicRHI::Init()</code>）调用
+<code>FRHICommandContext::InitializeResources()</code> 时通过
+<code>FRunnableThread::Create</code> 启动。</li>
+<li><strong>更新</strong>：在每帧渲染提交阶段，由
+<code>FRenderCommandFence</code> 和 <code>FRHICommandList</code>
+在渲染线程上下文中提交绘制命令。</li>
+<li><strong>销毁</strong>：在 <code>D3DRHI::Shutdown()</code> 或通用
+<code>RHIExit()</code> 中调用 <code>FRunnableThread::Kill</code>
+并释放线程对象。</li>
+</ul>
+<h3 id="rhi-线程">7.4 RHI 线程</h3>
+<ul>
+<li><strong>创建时机</strong>：与渲染线程类似，部分平台（如 Vulkan）在
+<code>CreateRHI</code> 后为异步命令提交启动独立 RHI 线程。</li>
+<li><strong>更新</strong>：负责管理底层驱动命令队列、Fence 同步与交换链
+Present 调用。</li>
+<li><strong>销毁</strong>：在 RHI 退出流程中依次停止并销毁。</li>
+</ul>
+<h3 id="任务图线程">7.5 任务图线程</h3>
+<ul>
+<li><strong>创建时机</strong>：在
+<code>FTaskGraphInterface::Startup()</code> 中，通过
+<code>FTaskGraphInterface::Get().Startup()</code>
+启动一组后台线程。</li>
+<li><strong>更新</strong>：按需执行 <code>FGraphEvent</code>
+调度的任务节点，如资源加载、AI 逻辑、物理仿真子任务。</li>
+<li><strong>销毁</strong>：在引擎退出阶段
+<code>FTaskGraphInterface::Shutdown()</code> 中回收所有任务线程。</li>
+</ul>
+<h3 id="异步加载线程">7.6 异步加载线程</h3>
+<ul>
+<li><strong>创建时机</strong>：在引擎初始化阶段
+<code>FAsyncLoadingThread::Init()</code> 中，通过
+<code>FRunnableThread::Create</code> 启动用于包/资源加载。</li>
+<li><strong>更新</strong>：不断读取 <code>FAsyncLoadingThread</code>
+的请求队列，在后台加载资产并在完成时通知主线程。</li>
+<li><strong>销毁</strong>：在
+<code>FAsyncLoadingThread::Shutdown()</code> 中停止线程并清理队列。</li>
+</ul>
+<h3 id="其他子系统线程">7.7 其他子系统线程</h3>
+<ul>
+<li><strong>物理线程</strong>：如
+<code>FPhysScene::InitPhysScene()</code>
+可创建用于并行物理仿真的线程。</li>
+<li><strong>音频线程</strong>：在 <code>FAudioDevice::Init()</code>
+中创建，用于音频混合与解码。</li>
+</ul>
+<h2 id="八反射系统">八、反射系统</h2>
+<p>Unreal Engine 的反射系统（Reflection System，又称 Property System）是
+C++
+语言在运行时缺乏本地支持的情况下，为实现运行时类型查询、序列化、垃圾回收、网络复制及蓝图交互而设计的通用机制
+。该系统由 Unreal Header
+Tool（UHT）在编译时生成元数据，并在运行时通过静态注册与 FArchive
+等组件提供完整的元信息访问。</p>
+<h3 id="核心元类uobject-与-uclass">8. 1 核心元类：UObject 与 UClass</h3>
+<ul>
+<li><strong>UObject</strong>
+是所有受反射支持对象的基类，定义于Engine/Source/Runtime/CoreUObject/Public/UObject/Object.h。它承载了
+GetClass()、Serialize()、垃圾回收标记等核心方法。</li>
+<li><strong>UClass</strong> 是 UObject 类的元类，描述一个具体 UObject
+派生类型的属性、函数列表和构造器。每个反射类在运行时都对应一个唯一的
+UClass 实例，并保存于全局类注册表中。</li>
+</ul>
+<h3 id="注解与-uht-生成">8. 2 注解与 UHT 生成</h3>
+<ul>
+<li><strong>UCLASS()</strong>：标记一个类使其参与反射，生成对应的 UClass
+元数据。</li>
+<li><strong>USTRUCT()</strong>：标记一个 struct 参与反射，生成 UStruct
+元数据。</li>
+<li><strong>UPROPERTY(...)</strong>：标记成员变量参与属性反射，生成
+FProperty 元数据。</li>
+<li><strong>UFUNCTION(...)</strong>：标记成员函数参与方法反射，生成
+UFunction 元数据。</li>
+</ul>
+<p>所有宏定义与 UHT 针对这些标记生成的头文件，位于
+<ClassName>.generated.h，并在编译时被包含于源文件末尾</p>
+<h3 id="反射元数据对象">8. 3 反射元数据对象</h3>
+<ul>
+<li><strong>UStruct /
+UClass</strong>：分别保存结构体和类的字段（PropertyLink
+链表）、父类指针、元数据（MetaData）等。</li>
+<li><strong>FProperty</strong>：所有属性的基类，子类如
+FIntProperty、FStructProperty、FArrayProperty
+等实现具体序列化与访问接口，定义于 Property.cpp。</li>
+<li><strong>UFunction</strong>：保存函数签名、参数列表与可调用指针，用于在蓝图或网络复制时动态调用。</li>
+<li><strong>UEnum</strong>：保存枚举类型信息，实现编辑器下枚举面板数据填充。</li>
+</ul>
+<h3 id="反射注册机制">8. 4 反射注册机制</h3>
+<ol type="1">
+<li><strong>编译时生成</strong></li>
+</ol>
+<p>UHT 根据注解宏解析 C++ 源码，生成 <Type>.generated.h，其中包含：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">StaticRegisterNativesUMyClass</span><span class="params">()</span></span>;</span><br><span class="line"><span class="function">UClass* <span class="title">Z_Construct_UClass_UMyClass</span><span class="params">()</span></span>;</span><br><span class="line"><span class="keyword">template</span>&lt;&gt; MYMODULE_API UClass* StaticClass&lt;UMyClass&gt;();</span><br></pre></td></tr></table></figure>
+<p>这些函数最终注册到 Z_CompiledInDeferFile
+数组中，延迟于运行时统一调用。</p>
+<ol start="2" type="1">
+<li><strong>静态初始化</strong></li>
+</ol>
+<p>在模块加载（IMPLEMENT_MODULE）时，FModuleManager 调用
+StartupModule，触发 Z_CompiledInDeferFile 中的
+FRegisterCompiledInInfo，自动注册所有 UClass、UStruct、UEnum
+等到全局注册表。</p>
+<ol start="3" type="1">
+<li><strong>运行时访问</strong></li>
+</ol>
+<ul>
+<li><strong>UMyClass::StaticClass()</strong> 返回对应的
+UClass*，可用于动态创建实例或做类型判断。</li>
+<li><strong>MyObject-&gt;GetClass()</strong> 返回实例的 UClass*，支持
+IsA()、Cast&lt;&gt;() 等运行时安全转换。</li>
+</ul>
+<h3 id="运行时类型信息">8.5 运行时类型信息</h3>
+<ul>
+<li><strong>StaticClass / GetClass</strong></li>
+</ul>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">UClass* AMyActorClass = AMyActorClass::StaticClass();</span><br><span class="line">UClass* RuntimeClass   = MyActorInstance-&gt;GetClass();</span><br></pre></td></tr></table></figure>
+<p>前者通过模板实现，后者从 UObject
+基类获取实例类型指针，二者均依赖全局注册表。</p>
+<ul>
+<li><strong>类型查询与转换</strong></li>
+</ul>
+<p>UObject::IsA(UClass*) 和 Cast<DesiredType>(Object) 在底层调用
+GetClass()-&gt;IsChildOf(DesiredClass)，实现安全的继承链检查与指针转换</p>
+<ul>
+<li><strong>动态创建对象</strong></li>
+</ul>
+<p>UE5中动态创建对象主要分为两类场景：</p>
+<ol type="1">
+<li>创建普通UObject派生类（非Actor对象）</li>
+</ol>
+<p>使用 NewObject<T>() 模板函数，直接通过UClass信息创建对象。
+<strong>代码示例：</strong> <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 假设存在一个反射类 UMyObject : public UObject</span></span><br><span class="line">UClass* MyClass = UMyObject::StaticClass(); <span class="comment">// 获取UClass</span></span><br><span class="line">UMyObject* MyObj = NewObject&lt;UMyObject&gt;(GetTransientPackage(), MyClass);</span><br></pre></td></tr></table></figure></p>
+<ol start="2" type="1">
+<li>创建Actor派生类（需存在于游戏场景中）</li>
+</ol>
+<p>Actor必须通过UWorld::SpawnActor()方法生成，且需要指定位置和旋转信息。
+<strong>代码示例：</strong> <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 假设存在一个反射类 AMyActor : public AActor</span></span><br><span class="line">UClass* MyActorClass = AMyActor::StaticClass(); <span class="comment">// 获取UClass</span></span><br><span class="line">FVector SpawnLocation = FVector(<span class="number">100.0f</span>, <span class="number">100.0f</span>, <span class="number">100.0f</span>);</span><br><span class="line">FRotator SpawnRotation = FRotator(<span class="number">0.0f</span>, <span class="number">0.0f</span>, <span class="number">0.0f</span>);</span><br><span class="line">AMyActor* MyActor = GetWorld()-&gt;SpawnActor&lt;AMyActor&gt;(MyActorClass, SpawnLocation, SpawnRotation);</span><br></pre></td></tr></table></figure> - 关键点： -
+必须通过UWorld上下文调用（通常在Actor或Component中使用GetWorld()）。 -
+Actor会自动注册到游戏场景中，并受引擎生命周期管理。</p>
+<ul>
+<li><strong>动态获取UClass的三种方法</strong></li>
+</ul>
+<p>若需通过字符串类名动态获取UClass，需结合反射系统：</p>
+<ol type="1">
+<li><strong>使用 FindClass() 函数</strong></li>
+</ol>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">FString ClassName = TEXT(<span class="string">"MyProject.MyObject"</span>);</span><br><span class="line">UClass* TargetClass = FindObject&lt;UClass&gt;(ANY_PACKAGE, *ClassName);</span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong>限制</strong>：类必须已在内存中加载（如被蓝图引用或代码显式加载）</li>
+</ul>
+<ol start="2" type="1">
+<li><strong>使用 FSoftClassPath（推荐）</strong></li>
+</ol>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">FSoftClassPath <span class="title">ClassPath</span><span class="params">(TEXT(<span class="string">"/Game/Blueprints/MyActor.MyActor_C"</span>))</span></span>; <span class="comment">// 蓝图类路径</span></span><br><span class="line">UClass* TargetClass = ClassPath.TryLoadClass&lt;UObject&gt;();</span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong>优势</strong>：支持异步加载和热重载，适用于蓝图类。</li>
+<li><strong>路径格式</strong>：/Game/Path/To/Asset.AssetName_C（蓝图类需加_C后缀）。</li>
+</ul>
+<ol start="3" type="1">
+<li><strong>通过静态类名直接获取</strong></li>
+</ol>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">UClass* TargetClass = LoadClass&lt;UObject&gt;(<span class="literal">nullptr</span>, TEXT(<span class="string">"/Script/MyProject.MyObject"</span>));</span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong>适用场景</strong>：已知类的完整名称（C++原生类的路径格式为/Script/ProjectName.ClassName）。</li>
+</ul>
+<h2 id="九串行化系统">九、串行化系统</h2>
+<h3 id="什么是串行化">9.1 什么是串行化？</h3>
+<p>串行化（Serialization）是将对象数据转换为字节流（用于存储或传输）的过程，反串行化（Deserialization）是将字节流还原为对象的过程。在
+UE5 中，串行化是构建以下系统的基石：</p>
+<ul>
+<li>关卡和资源的加载与保存（.uasset、.umap）</li>
+<li>对象的网络复制（Replication）</li>
+<li>蓝图与编辑器属性持久化</li>
+<li>SaveGame 系统</li>
+<li>GC 跟踪对象引用</li>
+</ul>
+<h3 id="核心组件概览">9.2 核心组件概览</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>模块</th>
+<th>作用</th>
+<th>核心类/结构</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Archive 系统</td>
+<td>底层读写抽象</td>
+<td>FArchive（抽象基类）</td>
+</tr>
+<tr>
+<td>Property System</td>
+<td>属性元数据反射与逐成员序列化</td>
+<td>FProperty 及其子类</td>
+</tr>
+<tr>
+<td>Linker 系统</td>
+<td>资源级别的加载/保存管理器</td>
+<td>FLinkerLoad, FLinkerSave</td>
+</tr>
+<tr>
+<td>Package 系统</td>
+<td>uasset/umap 资源的封装与版本控制</td>
+<td>UPackage, FPackageFileSummary</td>
+</tr>
+<tr>
+<td>Object Serializer</td>
+<td>对象级别的序列化逻辑</td>
+<td>UObject::Serialize()、FStructuredArchive</td>
+</tr>
+</tbody>
+</table>
+<h3 id="底层核心类详解">9.3 底层核心类详解</h3>
+<ol type="1">
+<li><strong>FArchive - 串行化的抽象基类</strong>
+定义于：Runtime/Core/Public/Serialization/Archive.h</li>
+</ol>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">CORE_API</span> <span class="title">FArchive</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="keyword">virtual</span> FArchive&amp; <span class="keyword">operator</span>&lt;&lt;(class UObject*&amp; Value);</span><br><span class="line">    <span class="keyword">virtual</span> FArchive&amp; <span class="keyword">operator</span>&lt;&lt;(class FName&amp; Value);</span><br><span class="line">    <span class="keyword">virtual</span> FArchive&amp; <span class="keyword">operator</span>&lt;&lt;(int32&amp; Value);</span><br><span class="line">    <span class="keyword">virtual</span> FArchive&amp; <span class="keyword">operator</span>&lt;&lt;(FString&amp; Value);</span><br><span class="line">    ...</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p><strong>特点：</strong> - 所有读写行为都通过重载 &lt;&lt; 操作符完成
+- 可被继承形成不同上下文的读写器，如： - FMemoryReader /
+FMemoryWriter：对内存块操作 - FArchiveFileReader /
+FArchiveFileWriter：对文件操作 -
+FStructuredArchive：支持结构化序列化（分组、字段名等）</p>
+<ol start="2" type="1">
+<li><strong>FProperty - 元属性序列化</strong></li>
+</ol>
+<p>每个 UCLASS / USTRUCT 中声明了 UPROPERTY 的变量，会对应一个 FProperty
+对象，自动遍历并串行化。</p>
+<p>核心接口：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">virtual</span> <span class="keyword">void</span> <span class="title">SerializeItem</span><span class="params">(FArchive&amp; Ar, <span class="keyword">void</span>* Value, <span class="keyword">void</span> <span class="keyword">const</span>* Defaults)</span> <span class="keyword">const</span></span>;</span><br></pre></td></tr></table></figure>
+<p>派生类示例：</p>
+<ul>
+<li>FIntProperty：int 类型字段</li>
+<li>FStructProperty：嵌套结构体字段</li>
+<li>FArrayProperty：TArray 类型字段</li>
+</ul>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">FProperty* Property = ...;</span><br><span class="line"><span class="keyword">void</span>* DataPtr = ...;</span><br><span class="line">Property-&gt;SerializeItem(Ar, DataPtr);</span><br></pre></td></tr></table></figure>
+<ol start="3" type="1">
+<li><strong>UObject::Serialize() - 对象级别的自定义序列化</strong></li>
+</ol>
+<p>定义于 Object.cpp： <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">virtual</span> <span class="keyword">void</span> <span class="title">UObject::Serialize</span><span class="params">(FArchive&amp; Ar)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="comment">// 引擎默认会遍历属性链表并调用 SerializeItem</span></span><br><span class="line">    Super::Serialize(Ar);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure> 每个 UCLASS
+都可以覆写此函数，实现自定义的写入逻辑（但仍应调用 Super::Serialize
+保证基础属性被序列化）。</p>
+<ol start="4" type="1">
+<li><strong>FLinkerLoad / FLinkerSave - 资源串行化入口</strong></li>
+</ol>
+<p>FLinkerLoad：用于从 .uasset/.umap 文件中加载对象
+FLinkerSave：用于保存对象到磁盘文件</p>
+<p>关键函数： <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">FLinkerLoad::SerializeExport</span><span class="params">(UObject* Object)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">FLinkerSave::SavePackage</span><span class="params">()</span></span>;</span><br></pre></td></tr></table></figure> 这些类通常与 UPackage
+关联，管理该包中所有对象的加载、名字查找、资源依赖。</p>
+<h3 id="结构化序列化格式fstructuredarchive">9.4
+结构化序列化格式：FStructuredArchive</h3>
+<p>UE5 引入了新的结构化序列化 API，替代传统的线性
+FArchive，提供更强的稳定性与版本支持。</p>
+<p>核心结构：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">FStructuredArchive <span class="title">Archive</span><span class="params">(UnderlyingArchive)</span></span>;</span><br><span class="line">FStructuredArchive::FSlot Slot = Archive.Open();</span><br><span class="line">Slot.EnterRecord()-&gt;EnterField(TEXT(<span class="string">"Health"</span>)) &lt;&lt; MyHealth;</span><br></pre></td></tr></table></figure>
+<p>优势：</p>
+<ul>
+<li>支持字段名</li>
+<li>支持嵌套记录</li>
+<li>更好的人类可读性（对 JSON/YAML 友好）</li>
+<li>支持版本差异（Field Skipping）</li>
+</ul>
+<h3 id="序列化文件格式.uasset-与-fpackagefilesummary">9.5
+序列化文件格式：.uasset 与 FPackageFileSummary</h3>
+<p>所有资源（蓝图、纹理、关卡等）最终都被存储为 .uasset 或 .umap
+文件。其头部格式由以下结构描述：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">FPackageFileSummary</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    int32 Tag;</span><br><span class="line">    int32 LegacyFileVersion;</span><br><span class="line">    FGuid CustomVersionContainer;</span><br><span class="line">    int32 NameCount;</span><br><span class="line">    FPackageIndex ExportCount;</span><br><span class="line">    ...</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">这些字段由 FLinkerLoad 加载，决定后续如何解析对象及其依赖。</span><br><span class="line"></span><br><span class="line">定义位置：</span><br><span class="line">Runtime/CoreUObject/Public/UObject/PackageFileSummary.h</span><br></pre></td></tr></table></figure>
+<h3 id="实际序列化流程加载流程图">9.6 实际序列化流程（加载流程图）</h3>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">LoadPackage()</span><br><span class="line">  └──&gt; Create FLinkerLoad</span><br><span class="line">         └──&gt; Read FPackageFileSummary</span><br><span class="line">         └──&gt; Load Name Map, Export Map, Import Map</span><br><span class="line">         └──&gt; Call UObject::Serialize for each export</span><br><span class="line">                   └──&gt; FProperty::SerializeItem() 逐字段读取</span><br></pre></td></tr></table></figure>
+<h3 id="savegame-系统">9.7 SaveGame 系统</h3>
+<p>SaveGame 系统
+是一套用于将游戏中的状态（如玩家属性、关卡信息、物品等）序列化为磁盘文件，并在需要时恢复（反序列化）这些状态的机制。它提供了一个
+高层封装的方式来保存和加载游戏数据，通常用于存档、存盘、断点续玩等场景</p>
+<p><strong>使用示例：</strong> <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">USTRUCT(BlueprintType)</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">FPlayerSaveData</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    GENERATED_BODY()</span><br><span class="line"></span><br><span class="line">    UPROPERTY()</span><br><span class="line">    int32 Level;</span><br><span class="line"></span><br><span class="line">    UPROPERTY()</span><br><span class="line">    <span class="keyword">float</span> Health;</span><br><span class="line"></span><br><span class="line">    UPROPERTY()</span><br><span class="line">    FString PlayerName;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure> 这段结构体在 SaveGame
+中保存时，会通过 FStructProperty 自动进行字段遍历与序列化。</p>
+<h3 id="版本控制fcustomversion">9.8 版本控制：FCustomVersion</h3>
+<p>UE 支持多版本资源兼容，通过 FArchive::CustomVer() 查询：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">int32 Version = Ar.CustomVer(FMyPluginVersion::GUID);</span><br><span class="line"><span class="keyword">if</span> (Version &lt; SOME_VERSION)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 使用旧的反序列化方式</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="字节序">9.10 字节序</h3>
+<ol type="1">
+<li><strong>什么是字节序（Endian）？</strong></li>
+</ol>
+<ul>
+<li>Little Endian（小端）：低位字节在前（低地址）</li>
+<li>Big Endian（大端）：高位字节在前（低地址）</li>
+</ul>
+<p>UE 的主机平台（如 Windows 和 Linux）一般使用 小端 存储，因此 .uasset
+文件默认也使用小端格式</p>
+<ol start="2" type="1">
+<li><strong>核心处理类：FArchive</strong></li>
+</ol>
+<p>UE 中字节序的读写是通过 FArchive
+抽象类处理的。派生类中会根据平台和目标字节序做转换。</p>
+<p><strong>关键成员变量：</strong></p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">bool</span> FArchive::ForceByteSwapping;</span><br><span class="line"><span class="keyword">bool</span> FArchive::IsPersistent; <span class="comment">// 读写的是磁盘文件</span></span><br></pre></td></tr></table></figure>
+<p><strong>核心逻辑：</strong></p>
+<p>每个派生类在读写整数等多字节数据时，都会调用如下代码来决定是否做字节翻转：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">FArchive::ByteSwap</span><span class="params">(<span class="keyword">void</span>* V, int32 Length)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	uint8* Ptr = (uint8*)V;</span><br><span class="line">	int32 Top = Length - <span class="number">1</span>;</span><br><span class="line">	int32 Bottom = <span class="number">0</span>;</span><br><span class="line">	<span class="keyword">while</span> (Bottom &lt; Top)</span><br><span class="line">	&#123;</span><br><span class="line">		Swap(Ptr[Top--], Ptr[Bottom++]);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function">FArchive&amp; <span class="title">FArchive::SerializeByteOrderSwapped</span><span class="params">(<span class="keyword">void</span>* V, int32 Length)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">if</span> (IsLoading())</span><br><span class="line">	&#123;</span><br><span class="line">		Serialize(V, Length); <span class="comment">// Read.</span></span><br><span class="line">		ByteSwap(V, Length); <span class="comment">// Swap.</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">else</span> <span class="comment">// Writing</span></span><br><span class="line">	&#123;</span><br><span class="line">		ByteSwap(V, Length); <span class="comment">// Swap V.</span></span><br><span class="line">		Serialize(V, Length); <span class="comment">// Write V.</span></span><br><span class="line">		ByteSwap(V, Length); <span class="comment">// Swap V back to its original byte order to prevent caller from observing V swapped.</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> *<span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol start="3" type="1">
+<li><strong>保存时的字节序</strong></li>
+</ol>
+<p><strong>默认行为：</strong></p>
+<ul>
+<li>UE 保存 .uasset 文件时通常
+不做字节翻转（即保存为主机平台字节序，小端）。</li>
+<li>例如 Windows 保存时使用小端格式，且不会设置 ForceByteSwapping 为
+true。</li>
+</ul>
+<p><strong>可选配置：</strong></p>
+<p>UE
+支持强制以大端格式保存资源（用于跨平台），但一般只在构建某些平台的资源包时启用，比如：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">FArchive&amp; Ar;</span><br><span class="line">Ar.SetByteSwapping(<span class="literal">true</span>); <span class="comment">// 强制切换字节序</span></span><br></pre></td></tr></table></figure>
+<ol start="4" type="1">
+<li><strong>加载时的字节序检测</strong></li>
+</ol>
+<p>文件头中的魔数（Magic Number） UE 使用 FPackageFileSummary::Tag
+字段中的魔数来判断文件是否需要字节翻转。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PACKAGE_FILE_TAG			0x9E2A83C1</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PACKAGE_FILE_TAG_SWAPPED	0xC1832A9E</span></span><br></pre></td></tr></table></figure>
+<p>当加载 .uasset 时，UE 首先读入前 4 字节作为
+Tag，然后判断是否为正常魔数或反转魔数, 这个魔数存在于文件最前面，即
+FPackageFileSummary 的开头部分。</p>
+<h2 id="十总结">十、总结</h2>
+<p>通过以上模块划分与驱动说明，可以看到 UE5 通过 FModuleManager
+实现高度模块化架构，各模块在不同加载阶段注册初始化，并在引擎生命周期中由相应子系统调用，保证了功能隔离与灵活扩展。
+通过上述分析，我们梳理了 UE5 在 Windows
+平台下从操作系统原生消息到游戏逻辑回调的完整输入处理管道。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/UE5/" rel="tag"><i class="fa fa-tag"></i> UE5</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2025/04/26/%E5%B7%A5%E5%85%B7/Hexo/%E5%9C%A8Hexo%E4%B8%AD%E6%B8%B2%E6%9F%93MathJax%E6%95%B0%E5%AD%A6%E5%85%AC%E5%BC%8F/" rel="next" title="在Hexo中使用Mathjax渲染数学公式">
+                  <i class="fa fa-chevron-left"></i> 在Hexo中使用Mathjax渲染数学公式
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2025/07/21/Unity/Optimization/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96-GPU/" rel="prev" title="性能优化-GPU">
+                  性能优化-GPU <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#ue5启动流程与结构解析"><span class="nav-number">1.</span> <span class="nav-text">UE5启动流程与结构解析</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#一引擎启动流程详解"><span class="nav-number">1.1.</span> <span class="nav-text">一、引擎启动流程详解</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#启动入口与平台特化"><span class="nav-number">1.1.1.</span> <span class="nav-text">1.1 启动入口与平台特化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#guardedmain-函数结构"><span class="nav-number">1.1.2.</span> <span class="nav-text">1.2 GuardedMain 函数结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#初始化子系统分层解析"><span class="nav-number">1.1.3.</span> <span class="nav-text">1.3 初始化子系统分层解析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#模式差异化执行路径"><span class="nav-number">1.1.4.</span> <span class="nav-text">1.4 模式差异化执行路径</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#原生窗口创建与生命周期管理"><span class="nav-number">1.1.5.</span> <span class="nav-text">1.5 原生窗口创建与生命周期管理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#原生窗口与渲染管线关联"><span class="nav-number">1.1.6.</span> <span class="nav-text">1.6 原生窗口与渲染管线关联</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#二模块化架构与加载机制"><span class="nav-number">1.2.</span> <span class="nav-text">二、模块化架构与加载机制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#模块生命周期管理器-fmodulemanager"><span class="nav-number">1.2.1.</span> <span class="nav-text">2.1 模块生命周期管理器
+FModuleManager</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#模块元描述与阶段控制"><span class="nav-number">1.2.2.</span> <span class="nav-text">2.2 模块元描述与阶段控制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#静态与动态模块机制对比"><span class="nav-number">1.2.3.</span> <span class="nav-text">2.3 静态与动态模块机制对比</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#模块加载与调用流程"><span class="nav-number">1.2.4.</span> <span class="nav-text">2.4 模块加载与调用流程</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#模块发现与注册"><span class="nav-number">1.2.4.1.</span> <span class="nav-text">2.4.1 模块发现与注册</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#动态加载流程"><span class="nav-number">1.2.4.2.</span> <span class="nav-text">2.4.2 动态加载流程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#引擎对模块的调用"><span class="nav-number">1.2.4.3.</span> <span class="nav-text">2.4.3 引擎对模块的调用</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#热重载支持"><span class="nav-number">1.2.4.4.</span> <span class="nav-text">2.4.4 热重载支持</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#三引擎主循环机制剖析"><span class="nav-number">1.3.</span> <span class="nav-text">三、引擎主循环机制剖析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#各子阶段功能拆解"><span class="nav-number">1.3.1.</span> <span class="nav-text">3.1 各子阶段功能拆解</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#四核心运行时对象结构"><span class="nav-number">1.4.</span> <span class="nav-text">四、核心运行时对象结构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#uworld多子系统集成容器"><span class="nav-number">1.4.1.</span> <span class="nav-text">4.1 UWorld：多子系统集成容器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#aactor游戏对象原语单元"><span class="nav-number">1.4.2.</span> <span class="nav-text">4.2 AActor：游戏对象原语单元</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#组件化与解耦设计"><span class="nav-number">1.4.3.</span> <span class="nav-text">4.3 组件化与解耦设计</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#五外部输入处理机制windows-平台"><span class="nav-number">1.5.</span> <span class="nav-text">五、外部输入处理机制（Windows
+平台）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#平台消息获取与分发"><span class="nav-number">1.5.1.</span> <span class="nav-text">5.1 平台消息获取与分发</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#消息处理与转换"><span class="nav-number">1.5.2.</span> <span class="nav-text">5.2 消息处理与转换</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#slate-层事件分发"><span class="nav-number">1.5.3.</span> <span class="nav-text">5.3 Slate 层事件分发</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#引擎输入子系统"><span class="nav-number">1.5.4.</span> <span class="nav-text">5.4 引擎输入子系统</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#控制器与触摸支持"><span class="nav-number">1.5.5.</span> <span class="nav-text">5.5 控制器与触摸支持</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#整体事件流示意"><span class="nav-number">1.5.6.</span> <span class="nav-text">5.6 整体事件流示意</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#六主要ue5模块概览"><span class="nav-number">1.6.</span> <span class="nav-text">六、主要UE5模块概览</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#核心基础模块"><span class="nav-number">1.6.1.</span> <span class="nav-text">6.1 核心基础模块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#引擎功能模块"><span class="nav-number">1.6.2.</span> <span class="nav-text">6.2 引擎功能模块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ui-与输入模块"><span class="nav-number">1.6.3.</span> <span class="nav-text">6.3 UI 与输入模块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#网络与游戏系统模块"><span class="nav-number">1.6.4.</span> <span class="nav-text">6.4 网络与游戏系统模块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#工具与扩展模块"><span class="nav-number">1.6.5.</span> <span class="nav-text">6.5 工具与扩展模块</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#七ue5-多线程架构"><span class="nav-number">1.7.</span> <span class="nav-text">七、UE5 多线程架构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#主要线程列表"><span class="nav-number">1.7.1.</span> <span class="nav-text">7.1 主要线程列表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#游戏主线程"><span class="nav-number">1.7.2.</span> <span class="nav-text">7.2 游戏主线程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#渲染线程"><span class="nav-number">1.7.3.</span> <span class="nav-text">7.3 渲染线程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#rhi-线程"><span class="nav-number">1.7.4.</span> <span class="nav-text">7.4 RHI 线程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#任务图线程"><span class="nav-number">1.7.5.</span> <span class="nav-text">7.5 任务图线程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#异步加载线程"><span class="nav-number">1.7.6.</span> <span class="nav-text">7.6 异步加载线程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#其他子系统线程"><span class="nav-number">1.7.7.</span> <span class="nav-text">7.7 其他子系统线程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#八反射系统"><span class="nav-number">1.8.</span> <span class="nav-text">八、反射系统</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#核心元类uobject-与-uclass"><span class="nav-number">1.8.1.</span> <span class="nav-text">8. 1 核心元类：UObject 与 UClass</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#注解与-uht-生成"><span class="nav-number">1.8.2.</span> <span class="nav-text">8. 2 注解与 UHT 生成</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#反射元数据对象"><span class="nav-number">1.8.3.</span> <span class="nav-text">8. 3 反射元数据对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#反射注册机制"><span class="nav-number">1.8.4.</span> <span class="nav-text">8. 4 反射注册机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#运行时类型信息"><span class="nav-number">1.8.5.</span> <span class="nav-text">8.5 运行时类型信息</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#九串行化系统"><span class="nav-number">1.9.</span> <span class="nav-text">九、串行化系统</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#什么是串行化"><span class="nav-number">1.9.1.</span> <span class="nav-text">9.1 什么是串行化？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#核心组件概览"><span class="nav-number">1.9.2.</span> <span class="nav-text">9.2 核心组件概览</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#底层核心类详解"><span class="nav-number">1.9.3.</span> <span class="nav-text">9.3 底层核心类详解</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#结构化序列化格式fstructuredarchive"><span class="nav-number">1.9.4.</span> <span class="nav-text">9.4
+结构化序列化格式：FStructuredArchive</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#序列化文件格式.uasset-与-fpackagefilesummary"><span class="nav-number">1.9.5.</span> <span class="nav-text">9.5
+序列化文件格式：.uasset 与 FPackageFileSummary</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#实际序列化流程加载流程图"><span class="nav-number">1.9.6.</span> <span class="nav-text">9.6 实际序列化流程（加载流程图）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#savegame-系统"><span class="nav-number">1.9.7.</span> <span class="nav-text">9.7 SaveGame 系统</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#版本控制fcustomversion"><span class="nav-number">1.9.8.</span> <span class="nav-text">9.8 版本控制：FCustomVersion</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#字节序"><span class="nav-number">1.9.9.</span> <span class="nav-text">9.10 字节序</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#十总结"><span class="nav-number">1.10.</span> <span class="nav-text">十、总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <img class="site-author-image" itemprop="image" alt="张卫"
+    src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">张卫</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">31</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/zw514159799" title="CSDN &amp;rarr; https:&#x2F;&#x2F;blog.csdn.net&#x2F;zw514159799" rel="noopener" target="_blank"><i class="fa fa-fw fa-csdn"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://github.com/Divad1111?tab=repositories" title="GitHub &amp;rarr; https:&#x2F;&#x2F;github.com&#x2F;Divad1111?tab&#x3D;repositories" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.cnblogs.com/qilezaitu" title="博客园 &amp;rarr; https:&#x2F;&#x2F;www.cnblogs.com&#x2F;qilezaitu" rel="noopener" target="_blank"><i class="fa fa-fw fa-cnblogs"></i>博客园</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://baidu.com/" title="https:&#x2F;&#x2F;baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://bing.com/" title="https:&#x2F;&#x2F;bing.com" rel="noopener" target="_blank">Bing</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2019 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">张卫</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-area-chart"></i>
+    </span>
+      <span class="post-meta-item-text">站点总字数：</span>
+    <span title="站点总字数">542k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">8:13</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.1
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.5.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

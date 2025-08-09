@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="本文的目的是通过Shader代码实现Photoshop的图层混合模式，图层混合模式是将上图层中的颜色与下层图层中的颜色，通过一个公式计算出最总的颜色。 颜色混合公式 具体的公式如下：         混合模式 公式 说明     透明度 alpha * foregroundCol + bgCol * (1.0 - alpha) 实现Alpha混合        变暗 min(bgCol, fore">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Photoshop图层混合">
+<meta property="og:url" content="http://yoursite.com/2023/04/02/Unity/Graphics/Photoshop%E5%9B%BE%E5%B1%82%E6%B7%B7%E5%90%88/index.html">
+<meta property="og:site_name" content="张卫的博客">
+<meta property="og:description" content="本文的目的是通过Shader代码实现Photoshop的图层混合模式，图层混合模式是将上图层中的颜色与下层图层中的颜色，通过一个公式计算出最总的颜色。 颜色混合公式 具体的公式如下：         混合模式 公式 说明     透明度 alpha * foregroundCol + bgCol * (1.0 - alpha) 实现Alpha混合        变暗 min(bgCol, fore">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-04-02T08:06:02.000Z">
+<meta property="article:modified_time" content="2025-04-26T11:06:24.129Z">
+<meta property="article:author" content="张卫">
+<meta property="article:tag" content="Rendering">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://yoursite.com/2023/04/02/Unity/Graphics/Photoshop%E5%9B%BE%E5%B1%82%E6%B7%B7%E5%90%88/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>Photoshop图层混合 | 张卫的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">张卫的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">Done is better than perfect</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2023/04/02/Unity/Graphics/Photoshop%E5%9B%BE%E5%B1%82%E6%B7%B7%E5%90%88/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Photoshop图层混合
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-04-02 16:06:02" itemprop="dateCreated datePublished" datetime="2023-04-02T16:06:02+08:00">2023-04-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2025-04-26 19:06:24" itemprop="dateModified" datetime="2025-04-26T19:06:24+08:00">2025-04-26</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Unity/" itemprop="url" rel="index">
+                    <span itemprop="name">Unity</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>本文的目的是通过Shader代码实现Photoshop的图层混合模式，图层混合模式是将上图层中的颜色与下层图层中的颜色，通过一个公式计算出最总的颜色。</p>
+<h1 id="颜色混合公式">颜色混合公式</h1>
+<p>具体的公式如下：</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>混合模式</th>
+<th>公式</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>透明度</strong></td>
+<td>alpha * foregroundCol + bgCol * (1.0 - alpha)</td>
+<td>实现Alpha混合</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>变暗</td>
+<td>min(bgCol, foregroundCol)</td>
+<td>上下图层中，取最小的颜色值</td>
+</tr>
+<tr>
+<td><strong>正片叠底</strong></td>
+<td>bgCol * foregroundCol</td>
+<td>混合后颜色整体压暗，最常用的混合模式</td>
+</tr>
+<tr>
+<td>颜色加深</td>
+<td>1 - ((1-bgCol) / foregroundCol)</td>
+<td>-</td>
+</tr>
+<tr>
+<td>线性加深</td>
+<td>bgCol + foregroundCol - 1</td>
+<td>-</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>变亮</td>
+<td>max(bgCol, foregroundCol)</td>
+<td>上下图层中，取最大的颜色值</td>
+</tr>
+<tr>
+<td><strong>滤色</strong></td>
+<td>1 - (1-bgCol) * (1-foregroundCol)</td>
+<td>和正片叠底真好向反，两图层取反后再乘，再取反，也是比较常用的混合模式</td>
+</tr>
+<tr>
+<td>颜色减淡</td>
+<td>bgCol / (1-foregroundCol)</td>
+<td>-</td>
+</tr>
+<tr>
+<td>线性减淡</td>
+<td>bgCol + foregroundCol</td>
+<td>-</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>叠加</strong></td>
+<td>当bgCol&lt;0.5时, 2<em>(bgCol</em>foregroundCol); 当bgCol &gt;=
+0.5时, 1-2<em>(1-bgCol)</em>(1-foregroundCol)</td>
+<td>当bgCol小于0.5时，使用2倍的正片叠底；当bgColr大于等于0.5时，使用2倍的滤色，使用2倍是为了当bgCol=0.5时不断层.</td>
+</tr>
+<tr>
+<td>柔光</td>
+<td>当foregroundCol&lt;0.5时,
+2<em>bgCol</em>foregroundCol+pow(bgCol,2)<em>(1-2</em>foregroundCol);
+当foregroundCol &gt;= 0.5时,
+(2<em>bgCol</em>(1-foregroundCol)+sqrt(bgCol)<em>(2</em>foregroundCol -
+1))</td>
+<td>-</td>
+</tr>
+<tr>
+<td>强光</td>
+<td>当foregroundCol&lt;0.5时, bgCol * (2<em>foregroundCol);
+当foregroundCol &gt;= 0.5时, 1-((1-bgCol) </em> (1-2*(foregroundCol -
+0.5)))</td>
+<td>-</td>
+</tr>
+<tr>
+<td>亮光</td>
+<td>当foregroundCol&lt;0.5时, 1-(1-bgCol)/(2<em>foregroundCol);
+当foregroundCol &gt;= 0.5时, bgCol/(1-2</em>(foregroundCol-0.5))</td>
+<td>-</td>
+</tr>
+<tr>
+<td>线性光</td>
+<td>当foregroundCol&lt;0.5时, bgCol+2<em>foregroundCol-1;
+当foregroundCol &gt;= 0.5时, bgCol+2</em>(foregroundCol-0.5)</td>
+<td>-</td>
+</tr>
+<tr>
+<td>点光</td>
+<td>当foregroundCol&lt;0.5时, min(bgCol, 2<em>foregroundCol);
+当foregroundCol &gt;= 0.5时, max(bgCol, 2</em>(foregroundCol-0.5))</td>
+<td>-</td>
+</tr>
+<tr>
+<td>差值</td>
+<td>abs(bgCol-foregroundCol)</td>
+<td>-</td>
+</tr>
+<tr>
+<td>排除</td>
+<td>0.5-2<em>(bgCol-0.5)</em>(foregroundCol-0.5)</td>
+<td>-</td>
+</tr>
+<tr>
+<td>减去</td>
+<td>bgCol-foregroundCol</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<a id="more"></a>
+<h1 id="shader代码实现">Shader代码实现</h1>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F; https:&#x2F;&#x2F;www.deepskycolors.com&#x2F;archive&#x2F;2010&#x2F;04&#x2F;21&#x2F;formulas-for-Photoshop-blending-modes.html</span><br><span class="line">&#x2F;&#x2F; https:&#x2F;&#x2F;en.wikipedia.org&#x2F;wiki&#x2F;Blend_modes#Overlay</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F; 注意：渲染管线必须是gamma空间</span><br><span class="line">&#x2F;&#x2F; 注意：渲染管线必须是gamma空间</span><br><span class="line">&#x2F;&#x2F; 注意：渲染管线必须是gamma空间</span><br><span class="line">Shader &quot;PhotoShopLayerBlend&#x2F;LayerBlend&quot;</span><br><span class="line">&#123;</span><br><span class="line">    Properties</span><br><span class="line">    &#123;</span><br><span class="line">        _FrontTex (&quot;Top&quot;, 2D) &#x3D; &quot;white&quot; &#123;&#125;</span><br><span class="line">        _BackgroudTex (&quot;Bottom&quot;, 2D) &#x3D; &quot;white&quot; &#123;&#125;</span><br><span class="line">        _Alpha (&quot;Alpha&quot;, Range(0, 1)) &#x3D; 1</span><br><span class="line">        [KeywordEnum(OPACITY,   DARKEN,MULTIPLY,COLOR_BURN,LINEAR_BURN,   LIGHTEN,SCREEN,COLOR_DODGE,LINEAR_DODGE,   OVERLAY,SOFT_LIGHT,HARD_LIGHT,VIVID_LIGHT,LINEAR_LIGHT,PIN_LIGHT,   DIFFERENCE,EXCLUSION, SUB)] _BLEND (&quot;Blend&quot;, Float) &#x3D; 0</span><br><span class="line">    &#125;</span><br><span class="line">    SubShader</span><br><span class="line">    &#123;</span><br><span class="line">        Tags &#123; &quot;RenderType&quot;&#x3D;&quot;Opaque&quot; &quot;RenderPipeline&quot;&#x3D;&quot;UniversalPipeline&quot;&#125;</span><br><span class="line">        LOD 100</span><br><span class="line"></span><br><span class="line">        Pass</span><br><span class="line">        &#123;</span><br><span class="line">            HLSLPROGRAM</span><br><span class="line">            </span><br><span class="line">            #include &quot;Packages&#x2F;com.unity.render-pipelines.universal@12.1.7&#x2F;ShaderLibrary&#x2F;Core.hlsl&quot;</span><br><span class="line">            #include &quot;Packages&#x2F;com.unity.render-pipelines.core@12.1.7&#x2F;ShaderLibrary&#x2F;Color.hlsl&quot;</span><br><span class="line">            </span><br><span class="line">            #pragma vertex vert</span><br><span class="line">            #pragma fragment frag</span><br><span class="line"></span><br><span class="line">            #pragma multi_compile _ _BLEND_OPACITY _BLEND_DARKEN _BLEND_MULTIPLY _BLEND_COLOR_BURN _BLEND_LINEAR_BURN _BLEND_LIGHTEN _BLEND_SCREEN _BLEND_COLOR_DODGE _BLEND_LINEAR_DODGE _BLEND_OVERLAY _BLEND_SOFT_LIGHT _BLEND_HARD_LIGHT _BLEND_VIVID_LIGHT _BLEND_LINEAR_LIGHT _BLEND_PIN_LIGHT _BLEND_DIFFERENCE _BLEND_EXCLUSION _BLEND_SUB</span><br><span class="line"></span><br><span class="line">            sampler2D _BackgroudTex;</span><br><span class="line">            float4 _BackgroudTex_ST;</span><br><span class="line">            sampler2D _FrontTex;</span><br><span class="line">            float4 _FrontTex_ST;</span><br><span class="line">            float _Alpha;</span><br><span class="line"></span><br><span class="line">            struct Attributes </span><br><span class="line">            &#123;</span><br><span class="line">                float4 positionOS  : POSITION;</span><br><span class="line">                float2 texcoord    : TEXCOORD0;</span><br><span class="line">            &#125;;</span><br><span class="line">            </span><br><span class="line">            struct Varyings </span><br><span class="line">            &#123;</span><br><span class="line">                float4 positionCS  : SV_POSITION;</span><br><span class="line">                float4 uv          : TEXCOORD0;</span><br><span class="line">            &#125;;</span><br><span class="line">            </span><br><span class="line">            Varyings vert(Attributes input)</span><br><span class="line">            &#123;</span><br><span class="line">                Varyings o;</span><br><span class="line">                o.positionCS &#x3D; TransformObjectToHClip(input.positionOS.xyz);</span><br><span class="line">                o.uv.xy &#x3D; TRANSFORM_TEX(input.texcoord, _BackgroudTex);</span><br><span class="line">                o.uv.zw &#x3D; TRANSFORM_TEX(input.texcoord, _FrontTex);</span><br><span class="line">                return o;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            half4 frag(Varyings input) : SV_TARGET            </span><br><span class="line">            &#123;</span><br><span class="line">                float3 bgCol &#x3D; tex2D(_BackgroudTex, input.uv.xy).rgb;</span><br><span class="line">                float3 foregroundCol &#x3D; tex2D(_FrontTex, input.uv.zw).rgb;</span><br><span class="line"></span><br><span class="line">                float3 rstCol &#x3D; float3(0, 0, 0);</span><br><span class="line">                &#x2F;&#x2F; 透明度</span><br><span class="line">                #if _BLEND_OPACITY</span><br><span class="line">                    float alpha &#x3D; (_Alpha);</span><br><span class="line">                    rstCol &#x3D;  alpha * foregroundCol + bgCol * (1.0 - alpha);</span><br><span class="line"></span><br><span class="line">                &#x2F;&#x2F; 变暗组</span><br><span class="line">                #elif _BLEND_DARKEN         &#x2F;&#x2F;变暗</span><br><span class="line">                    rstCol &#x3D; min(bgCol, foregroundCol);</span><br><span class="line">                #elif _BLEND_MULTIPLY       &#x2F;&#x2F;正片叠底</span><br><span class="line">                    rstCol &#x3D; bgCol * foregroundCol;</span><br><span class="line">                #elif _BLEND_COLOR_BURN     &#x2F;&#x2F;颜色加深 </span><br><span class="line">                    rstCol &#x3D; 1 - ((1-bgCol) &#x2F; foregroundCol);</span><br><span class="line">                #elif _BLEND_LINEAR_BURN    &#x2F;&#x2F;线性加深</span><br><span class="line">                    rstCol &#x3D; bgCol + foregroundCol - 1;</span><br><span class="line"></span><br><span class="line">                &#x2F;&#x2F; 变亮组</span><br><span class="line">                #elif _BLEND_LIGHTEN        &#x2F;&#x2F;变亮</span><br><span class="line">                    rstCol &#x3D; max(bgCol, foregroundCol);</span><br><span class="line">                #elif _BLEND_SCREEN         &#x2F;&#x2F;滤色</span><br><span class="line">                    rstCol &#x3D; 1 - (1-bgCol) * (1-foregroundCol);</span><br><span class="line">                #elif _BLEND_COLOR_DODGE    &#x2F;&#x2F;颜色减淡</span><br><span class="line">                    rstCol &#x3D; bgCol &#x2F; (1-foregroundCol);</span><br><span class="line">                #elif _BLEND_LINEAR_DODGE   &#x2F;&#x2F;线性减淡</span><br><span class="line">                    rstCol &#x3D; bgCol + foregroundCol;</span><br><span class="line"></span><br><span class="line">                &#x2F;&#x2F; 叠加</span><br><span class="line">                #elif _BLEND_OVERLAY</span><br><span class="line">                    float3 s &#x3D; step(bgCol, float3(0.5, 0.5, 0.5));</span><br><span class="line">                    rstCol &#x3D; s * (2*bgCol*foregroundCol) + (1-s) * (1-2*(1-bgCol)*(1-foregroundCol));</span><br><span class="line">                &#x2F;&#x2F; 柔光</span><br><span class="line">                #elif _BLEND_SOFT_LIGHT</span><br><span class="line">                    float3 s &#x3D; step(foregroundCol, float3(0.5, 0.5, 0.5));</span><br><span class="line">                    &#x2F;&#x2F; rstCol &#x3D; s * (bgCol*(foregroundCol+0.5)) + (1-s) * (1-(1-bgCol)*(1-(foregroundCol-0.5)));</span><br><span class="line">                    rstCol &#x3D; s * (2*bgCol*foregroundCol+bgCol*bgCol*(1-2*foregroundCol)) + (1-s) * ((2*bgCol*(1-foregroundCol)+sqrt(bgCol)*(2*foregroundCol - 1)));</span><br><span class="line">                &#x2F;&#x2F; 强光</span><br><span class="line">                #elif _BLEND_HARD_LIGHT</span><br><span class="line">                    float3 s &#x3D; step(foregroundCol, float3(0.5, 0.5, 0.5));</span><br><span class="line">                    &#x2F;&#x2F; rstCol &#x3D; s * (2*bgCol*foregroundCol) + (1-s) * (1-2*(1-bgCol)*(1-foregroundCol));</span><br><span class="line">                    rstCol &#x3D; s * (bgCol * (2*foregroundCol)) + (1-s) * (1-((1-bgCol) * (1-2*(foregroundCol - 0.5))));</span><br><span class="line">                &#x2F;&#x2F; 亮光</span><br><span class="line">                #elif _BLEND_VIVID_LIGHT</span><br><span class="line">                    float3 s &#x3D; step(foregroundCol, float3(0.5, 0.5, 0.5));</span><br><span class="line">                    rstCol &#x3D; s * (1-(1-bgCol)&#x2F;(2*foregroundCol)) + (1-s) * (bgCol&#x2F;(1-2*(foregroundCol-0.5)));</span><br><span class="line">                &#x2F;&#x2F; 线性光</span><br><span class="line">                #elif _BLEND_LINEAR_LIGHT</span><br><span class="line">                    float3 s &#x3D; step(foregroundCol, float3(0.5, 0.5, 0.5));</span><br><span class="line">                    rstCol &#x3D; s * (bgCol+2*foregroundCol-1) + (1-s) * (bgCol+2*(foregroundCol-0.5));</span><br><span class="line">                &#x2F;&#x2F; 点光</span><br><span class="line">                #elif _BLEND_PIN_LIGHT</span><br><span class="line">                    float3 s &#x3D; step(foregroundCol, float3(0.5, 0.5, 0.5));</span><br><span class="line">                    rstCol &#x3D; s * (min(bgCol, 2*foregroundCol)) + (1-s) * (max(bgCol, 2*(foregroundCol-0.5)));</span><br><span class="line">                &#x2F;&#x2F; 差值</span><br><span class="line">                #elif _BLEND_DIFFERENCE</span><br><span class="line">                    rstCol &#x3D; abs(bgCol-foregroundCol);</span><br><span class="line">                &#x2F;&#x2F; 排除</span><br><span class="line">                #elif _BLEND_EXCLUSION</span><br><span class="line">                    rstCol &#x3D; 0.5-2*(bgCol-0.5)*(foregroundCol-0.5);</span><br><span class="line">                &#x2F;&#x2F; 减去</span><br><span class="line">                #elif _BLEND_SUB</span><br><span class="line">                    rstCol &#x3D; bgCol-foregroundCol;</span><br><span class="line">                #else</span><br><span class="line">                    rstCol &#x3D; float3(1, 1, 1);</span><br><span class="line">                #endif</span><br><span class="line">                </span><br><span class="line">                return half4(rstCol.rgb, 1);</span><br><span class="line">            &#125;</span><br><span class="line">            ENDHLSL</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>注意:要想和Photoshop的效果一样,必须使用gamma空间,
+Photoshop是在gamma空间下计算的颜色值</strong></p>
+<h1 id="参考">参考</h1>
+<p><a
+href="https://en.wikipedia.org/wiki/Blend_modes">https://en.wikipedia.org/wiki/Blend_modes</a>
+<a
+href="https://www.deepskycolors.com/archive/2010/04/21/formulas-for-Photoshop-blending-modes.html">https://www.deepskycolors.com/archive/2010/04/21/formulas-for-Photoshop-blending-modes.html</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/Rendering/" rel="tag"><i class="fa fa-tag"></i> Rendering</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/02/14/Unity/Graphics/Batching/" rel="next" title="Static Batching, Dynamic Batching, GUP Instancing和SRP Batcher">
+                  <i class="fa fa-chevron-left"></i> Static Batching, Dynamic Batching, GUP Instancing和SRP Batcher
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2024/04/21/Unity/Graphics/%E6%B8%B8%E6%88%8F%E5%90%8E%E5%A4%84%E7%90%86%E6%95%88%E6%9E%9C/" rel="prev" title="游戏后处理效果">
+                  游戏后处理效果 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#颜色混合公式"><span class="nav-number">1.</span> <span class="nav-text">颜色混合公式</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#shader代码实现"><span class="nav-number">2.</span> <span class="nav-text">Shader代码实现</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考"><span class="nav-number">3.</span> <span class="nav-text">参考</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <img class="site-author-image" itemprop="image" alt="张卫"
+    src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">张卫</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">31</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/zw514159799" title="CSDN &amp;rarr; https:&#x2F;&#x2F;blog.csdn.net&#x2F;zw514159799" rel="noopener" target="_blank"><i class="fa fa-fw fa-csdn"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://github.com/Divad1111?tab=repositories" title="GitHub &amp;rarr; https:&#x2F;&#x2F;github.com&#x2F;Divad1111?tab&#x3D;repositories" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.cnblogs.com/qilezaitu" title="博客园 &amp;rarr; https:&#x2F;&#x2F;www.cnblogs.com&#x2F;qilezaitu" rel="noopener" target="_blank"><i class="fa fa-fw fa-cnblogs"></i>博客园</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://baidu.com/" title="https:&#x2F;&#x2F;baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://bing.com/" title="https:&#x2F;&#x2F;bing.com" rel="noopener" target="_blank">Bing</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2019 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">张卫</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-area-chart"></i>
+    </span>
+      <span class="post-meta-item-text">站点总字数：</span>
+    <span title="站点总字数">542k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">8:13</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.1
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.5.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

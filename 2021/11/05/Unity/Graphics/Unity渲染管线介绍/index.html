@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="什么渲染管线 渲染管线跟工厂的流水线一样，工厂的流水线为了生成最终的一个产品，每个流水线的工人只干一件特定的事情，最后将一个产品完成。计算机的图形渲染管线和工厂的流水线一样，只是图形渲染管线最终生成的是一张二维图片。 我们将一个渲染流程分成3个阶段：应用阶段、几何阶段、光栅化阶段。注意这仅仅是概念性阶段，每个阶段本身通常也是一个流水线系统，即包含了子流水线阶段。如下图：   应用阶段  从名字我们">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Unity渲染管线介绍">
+<meta property="og:url" content="http://yoursite.com/2021/11/05/Unity/Graphics/Unity%E6%B8%B2%E6%9F%93%E7%AE%A1%E7%BA%BF%E4%BB%8B%E7%BB%8D/index.html">
+<meta property="og:site_name" content="张卫的博客">
+<meta property="og:description" content="什么渲染管线 渲染管线跟工厂的流水线一样，工厂的流水线为了生成最终的一个产品，每个流水线的工人只干一件特定的事情，最后将一个产品完成。计算机的图形渲染管线和工厂的流水线一样，只是图形渲染管线最终生成的是一张二维图片。 我们将一个渲染流程分成3个阶段：应用阶段、几何阶段、光栅化阶段。注意这仅仅是概念性阶段，每个阶段本身通常也是一个流水线系统，即包含了子流水线阶段。如下图：   应用阶段  从名字我们">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://divad1111.github.io/images/shader/pflow.png">
+<meta property="og:image" content="http://yoursite.com/images/unity/graphics/rendering_path_comp.png">
+<meta property="og:image" content="http://yoursite.com/images/unity/graphics/urp_path.png">
+<meta property="og:image" content="http://yoursite.com/images/unity/graphics/introduction_phase1.png">
+<meta property="og:image" content="http://yoursite.com/images/unity/graphics/introduction_phase2.png">
+<meta property="article:published_time" content="2021-11-05T04:20:02.000Z">
+<meta property="article:modified_time" content="2025-04-26T11:06:24.130Z">
+<meta property="article:author" content="张卫">
+<meta property="article:tag" content="Rendering">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://divad1111.github.io/images/shader/pflow.png">
+
+<link rel="canonical" href="http://yoursite.com/2021/11/05/Unity/Graphics/Unity%E6%B8%B2%E6%9F%93%E7%AE%A1%E7%BA%BF%E4%BB%8B%E7%BB%8D/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>Unity渲染管线介绍 | 张卫的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">张卫的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">Done is better than perfect</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/11/05/Unity/Graphics/Unity%E6%B8%B2%E6%9F%93%E7%AE%A1%E7%BA%BF%E4%BB%8B%E7%BB%8D/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Unity渲染管线介绍
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-11-05 12:20:02" itemprop="dateCreated datePublished" datetime="2021-11-05T12:20:02+08:00">2021-11-05</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2025-04-26 19:06:24" itemprop="dateModified" datetime="2025-04-26T19:06:24+08:00">2025-04-26</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Unity/" itemprop="url" rel="index">
+                    <span itemprop="name">Unity</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="什么渲染管线">什么渲染管线</h1>
+<p>渲染管线跟工厂的流水线一样，工厂的流水线为了生成最终的一个产品，每个流水线的工人只干一件特定的事情，最后将一个产品完成。计算机的图形渲染管线和工厂的流水线一样，只是图形渲染管线最终生成的是一张二维图片。
+我们将一个渲染流程分成3个阶段：<strong>应用阶段</strong>、<strong>几何阶段</strong>、<strong>光栅化阶段</strong>。注意这仅仅是概念性阶段，每个阶段本身通常也是一个流水线系统，即包含了子流水线阶段。如下图：
+<img src="https://divad1111.github.io/images/shader/pflow.png"
+alt="渲染流水线三个概念图" /></p>
+<ul>
+<li><strong>应用阶段</strong></li>
+</ul>
+<p>从名字我们可以看出，这个阶段是由我们的应用主导的，因此通常由CPU负责实现。换句话说，我们这些开发者具有这个阶段的绝对控制权。
+在这阶段中，开发者有3个主要任务： 1.
+我们要准备好场景数据，例如摄像机的位置、视椎体、场景中包含了哪些模型、使用了哪些光源等等；
+2.
+为了渲染性能，我们往往需要做一个粗粒度剔除（culling）工作,以把哪些不可见的物体踢出去，这样就不需要再移交给几何阶段进行处理；
+3.
+最后我们要设置好每个模型的渲染状态，这些渲染状态包括但不限于它们使用的材质（漫反射颜色、高光反色颜色）、使用的纹理、使用的Shader等。
+这一阶段最重要的输出是渲染所需的几何信息，即<strong>渲染图元（rendering
+primitives）</strong>。通俗来讲，渲染图元可以是点、线、三角面等。这些渲染图元将会被传递给下一个阶段——几何阶段。</p>
+<ul>
+<li><strong>几何阶段</strong></li>
+</ul>
+<p>几何阶段用于处理所有和我们要绘制的几何相关的事情。例如，决定需要绘制的图元是什么，怎么绘制它们，在哪里绘制它们。这一阶段通常在GPU上进行。
+几何阶段负责和每个渲染图元打交道，进行逐顶点、逐多边形的操作。这个阶段可以进一步分成更小的流水阶段，这在下一章中会讲到。<strong>几何阶段的一个重要任务就是把顶点坐标变换到屏幕空间中，再交给光栅器进行处理。通过对输入的渲染图元进行多步处理后，</strong>这一阶段将会输出屏幕空间的二维顶点坐标、每个顶点对应的深度值，着色相等相关信息**，并传递给下一个阶段。</p>
+<ul>
+<li><strong>光栅化阶段</strong></li>
+</ul>
+<p>这一阶段将会使用上个阶段传递的数据来生成屏幕上的像素，并渲染出最终的图像。这个阶段也是在GPU上运行。光栅化的任务主要是决定每个渲染图元中的哪些像素应该被绘制在屏幕上。<strong>它需要对上一个阶段得到的逐顶点数据（例如纹理坐标，顶点颜色等）进行插值</strong>，然后在进行逐像素处理。和上一个阶段相似，光栅化阶段也可以分成更小的流水线阶段。</p>
+<a id="more"></a>
+<p>在Unity中，我们能够选择不同的渲染管线。Unity提供了3种(内建，SRP（URP和HDRP）)预定义的管线对于不同的兼容性和性能特性，我们也可以创建自己的渲染管线。每种类型的管线有这不同的兼容性适配不同类型的游戏，应用和平台，并且每种管线之间切换是非常困难的，因为不同的管线使用的shader不同。所以项目初期选择管线是非常重要的。Unity为我们提供了以下的渲染管线：</p>
+<ul>
+<li><strong>内建管线</strong>是Unity的默认渲染管线。它被定义为通用的渲染管线，限制了它的自定义。</li>
+<li><strong>URP</strong>是一个快速、可自定义的可编程渲染管线，让我们可以在各种平台上创建优化的图形。</li>
+<li><strong>HDRP</strong>是一个让您在高端平台上创建尖端的高保真图形的可编程管线。</li>
+<li><strong>自定义</strong>可以通过Unity的可编程渲染管线API自己创建渲染管线</li>
+</ul>
+<p><a
+href="https://docs.unity3d.com/Manual/render-pipelines-feature-comparison.html">各种渲染管线之间支持的特性对比</a></p>
+<h1 id="内建管线">内建管线</h1>
+<p>内建渲染管线是Unity的传统的管线，它不是基于可编程渲染管线的。我们能够配置它不同的渲染路径，以及通过命令buffer(command
+buffer)和回调(callback)来对其进行简单的扩展。这个章节将包含以下的内容：</p>
+<ul>
+<li>渲染路径</li>
+<li>使用命令buffer扩展内建渲染管线</li>
+<li>Shader实例</li>
+</ul>
+<h2 id="渲染路径">渲染路径</h2>
+<p>内建渲染管线支持不同的渲染路径，渲染路径被定义为对光照和着色的一些列操作(策略)。不同的渲染路径有不同的能力和性能表现。使用什么样的渲染路径取决于你项目的类型和目标硬件。我们能够在项目的Graphics窗口和Camera面板上去设置使用不同的渲染路径。如果在你运行的设备上不支持选择的渲染路径Unity则会给切换到兼容性更好的渲染路径，比如：在运行的设备上不支持延迟渲染，Unity则会切换到前向渲染路径。Unity总共为我们提供了4种渲染路径：<strong>前向渲染路径</strong>，<strong>延迟渲染路径</strong>,
+<strong>旧版延迟渲染路劲</strong>和<strong>旧版顶点光照渲染路径</strong>，现在内建渲染管线的渲染路径主要是：<strong>前向渲染路径</strong>和<strong>延迟渲染路径</strong>。不同渲染路径的对比如下图：</p>
+<figure>
+<img src="/images/unity/graphics/rendering_path_comp.png"
+alt="不同渲染路径对比" />
+<figcaption aria-hidden="true">不同渲染路径对比</figcaption>
+</figure>
+<h3 id="前向渲染路径">前向渲染路径</h3>
+<p>前向渲染路径是Unity内建渲染管线的默认渲染渲染路径，它是一个通用的渲染路径。在前向渲染路径中实时光照是非常耗的。为了降低这种消耗,你可以选择在任意时刻有多少灯光是需要逐像素光照，其他的灯光则可以使用更低消耗的逐顶点或逐对象光照。如果你的项目没有大量的实时灯光，或者灯光效果不那么重要，前向渲染路径是一个不错的选择。
+前向渲染渲染每个对象时使用一个或多个pass进行着色，使用pass的数量取决于对象被多少灯光影响。前向渲染也会对灯光本身进行不同的处理，具体取决于它们的设置和光照强度。
+在前向渲染中，场景中一些（最多4个）最亮的灯光将进行逐像素渲染，然后最大4个点光源进行逐顶点光照，其他的灯光则使用球谐函数(Spherical
+Harmonics)进行计算。一个灯光是否进行逐像素光照或其他的光照方式取决于一下几点：
+- 灯光的渲染模式设置为“Not Important”时都是以逐顶点或SH进行光照的。 -
+最亮的方向光总是逐像素的。 -
+灯光的渲染模式设置为“Important”时都是逐像素光照的。 -
+如果上面的灯光数量还没达到QualitySetting中设置的逐像素灯光的上限时，则其他灯光以亮度优先的方式优先作为逐像素灯光使用。</p>
+<p>每个渲染对象在渲染时则使用以下规则： -
+基础pass只用于一个逐像素方向光和所有的逐顶点/SH光。 -
+其他逐像素灯光则在附加pass中着色，每个灯光执行一次附加pass。</p>
+<p>例如，下图的一个对象被8个灯光（A-H）所影响 <img
+src="/images/unity/graphics/forward_light.png" alt="灯光" /></p>
+<p>注意灯组重叠；
+例如，最后一个逐像素光照混合到逐顶点光照模式中，因此当物体和光照四处移动时，“光爆”会减少。</p>
+<h4 id="基础pass">基础pass</h4>
+<p>基础pass渲染对象时，使用逐像素方向光和所有的逐顶点/SH光，基础pass也添加任意的光照图，环境和自发光。方向光在基础pass上能够产生阴影。注意光照图对象不能从SH灯光中获取照明信息。当pass的flag设置为“OnlyDirectional”时，
+forward base
+pass仅作用于主方向光，环境/光照探针和光照图（SH和逐顶点灯光数据则不会被包含到pass的数据中）。</p>
+<h4 id="附加pass">附加pass</h4>
+<p>附加pass对于每个影响此对象的额外（除基础pass中使用的逐像素灯光外）逐像素灯光执行渲染。这些灯光在附加pass默认是不会有阴影（因此，前向渲染支持一个方向光带阴影）。除非multi_compile_fwdadd_fullshadows被使用。</p>
+<h4 id="前向渲染性能注意事项">前向渲染性能注意事项</h4>
+<p>每个被动态逐像素灯光影响的像素在渲染此像素时将增加大量的工作，并且这也会导致一个对象的渲染pass被执行多次。在低端设备（像手机或低端的PC）上应该避免出现超过一个的逐像素灯管照明到任意单个对象上，并且对于静态对象应该使用光照图而不每帧去计算它们的光照信息。逐顶点动态灯光在顶点变换的时候将增加大量的工作，所以尽量避免多个灯光同时照明一个对象。
+避免将两个距离很远的mesh进行合并，因为当有多个逐像素灯光时，每个mesh不得不被渲染多次，两个间隔比较远的mesh合并就不能被单独计算光照只有mesh有一个三角形被灯光覆盖整个mesh都将参与光照计算。
+在渲染期间，Unity将查找一个mesh周围的多有灯光并且计算哪些灯光对其影响最大。在Quality窗口去设置逐像素灯光数量和逐定点灯光数量的上限。每个灯光基于其到mesh的远近以及照明强度确定其对mehs的重要性，纯粹根据游戏的环境有些灯光是比其他灯光更重要的。基于这个原因，每个灯光上有个Render
+Mode的设置，我们能够将其设置为Important或Not Important,灯光标记为Not
+Important有更低的渲染开销。
+例如：一个赛车游戏，在昏暗的环境下开着前大灯，此时此灯光就应当将其设置为Improtant，像尾灯则可以设置为Not
+Important。 优化逐素光照可以节省 CPU 和 GPU 的工作：CPU
+需要执行的DrawCall调用更少，GPU
+需要处理的顶点和要栅格化的所有额外对象渲染的像素更少。</p>
+<p>球谐函数(Spherical Harmonics) 灯光的渲染速度非常快。
+它们在CPU上的开销很小，实际上对 GPU 来说是无额外开销的（也就是说，base
+pass 总是计算 SH
+光照；但由于SH光照的工作方式，无论多少SH光照，成本都是完全相同的）。
+<strong>SH灯光的缺点：</strong> -
+由于SH是在逐顶点计算的，不是逐像素，这也意味着它们不支持灯光Cookies或法线贴图。
+- SH照明的频率非常低。
+使用SH灯无法实现锐利的照明过渡。它们也只影响漫反射照明。 -
+SH照明不是局部的； 靠近某个表面的点或点 SH 灯会“看起来不对”。</p>
+<p>总而言之，SH灯通常对于小的动态物体来说已经足够了。</p>
+<h3 id="延迟渲染路径">延迟渲染路径</h3>
+<p>延迟着色是内建渲染管线中光照和阴影保真度最高的渲染路径。延迟渲染需要GPU的支持，并且还有一些限制。它不支持半透明对象，正交投影和硬件抗锯齿（可以同通过后处理解决-边缘查找做模糊）。它对剔除蒙版的支持有限(最多只能使用四个剔除蒙版。也就是你的剔除图层蒙版必须至少包含所有层减去四个任意层，因此必须设置32层中的28层。否则你会得到不正确的图形)，并将Renderer.receiveShadows标志视为始终为真。
+如果你的项目有大量的实时灯光并且需要更好的光照效果，并且你的目标硬件平台支持延迟渲染，那么这渲染路径将是个不错的选择。</p>
+<p>在使用延迟着色的时候，对象是没有灯光数量限制的。所有的灯光都将是逐像素的，这意味着它们都与法线贴图正确交互，另外所有的灯光都能有cookies和阴影。
+延迟着色的优点是光照的处理开销与灯光照亮的像素数成正比。光照的开销是由场景中的光量大小决定的不管它照亮了多少游戏对象。因此，可以通过让灯光照明范围更小来改善性能。延迟着色还具有高度一致和可预测的行为。每个灯光的效果都是逐像素计算的。</p>
+<h4 id="延迟着色的需求">延迟着色的需求</h4>
+<p>延迟着色它需要显卡支持多目标渲染（MRT），着色模型（Shader
+Model）3.0并且支持深度渲染纹理。大多数在2006年以后生产的PC显卡都支持延迟着色。在移动端，延迟着色至少需要是OpenGL
+ES3.0。</p>
+<h4 id="前向渲染性能注意事项-1">前向渲染性能注意事项</h4>
+<p>在延迟渲染中实时灯光的性能消耗跟这个灯光所照明的像素是成正比的，不依赖于场景的复杂度。所以小的Point光源或Spot光源的性能消耗是非常低的，如果照明对象是被其他对象部分或完全遮挡的那么它的性能开销将更小。</p>
+<p>当然，带阴影的灯光是比不带阴影的灯光更耗的。在延迟着色中，对于每个投射阴影的灯光，阴影投射对象还是需要被渲染一次或多次。</p>
+<h4 id="实现细节">实现细节</h4>
+<p>在延迟渲染完成后，再使用前向渲染路径渲染那些不支持延迟着色的Shader对象。
+在G-buffer中渲染目标（RT0-RT4）的默认布局如下，数据类型存储在每个渲染目标的不同通道中：</p>
+<ul>
+<li>RT0, ARGB32格式：漫反射颜色（RGB）, 遮挡（A）。</li>
+<li>RT1, ARGB32格式：高光颜色（RGB）, 粗糙度(A)。</li>
+<li>RT2, ARGB2101010格式：世界空间下的法线，未被使用（A）。</li>
+<li>RT3,
+ARGB2101010(非HDR)或ARGBHalf(HDR每个通道16bits)格式：自发光+光照+lightmap+反射探针+深度缓冲和模板缓冲</li>
+</ul>
+<p>所以默认的G-buffer布局每个像素是160bits/pixel(非HDR)或192bits/pixel(HDR)。
+如果对于混合光照使用了Shadowmask或Distance
+Shadowmask模式,那么第5个渲染目标（RT）将被使用：</p>
+<ul>
+<li>RT5, ARGB32 格式：灯光遮挡值（RGBA）</li>
+</ul>
+<p>因此G-buffer布局大小将增至每个192bits/pixel(非HDR)或224bits/pixel(HDR)。</p>
+<p>如果硬件不支持五个并发渲染目标，则使用阴影遮罩的对象将回退到前向渲染路径。
+当摄像机不使用 HDR 时，发射+光照缓冲区 (RT3)
+采用对数编码，因此提供的动态范围高于 ARGB32 纹理通常可能提供的范围。</p>
+<p>请注意，当摄像机使用 HDR 渲染时，不会为发射 + 光照缓冲区 (RT3)
+创建单独的渲染目标；而是将摄像机渲染到的渲染目标（即传递给图像效果的渲染目标）用作
+RT3。</p>
+<h4 id="g-buffer-pass">G-Buffer pass</h4>
+<p>G-Buffer pass
+将每个游戏对象渲染一次。漫射和镜面反射颜色、表面平滑度、世界空间法线和自发光+环境光+反射光+光照贴图都将渲染到G-Buffer纹理中。G-Buffer纹理设置为全局着色器属性供着色器以后访问（_CameraGBufferTexture0
+.._CameraGBufferTexture3 指定）。</p>
+<h4 id="光照pass">光照pass</h4>
+<p>光照pass根据G-Buffer和深度来计算光照。光照是在屏幕空间内计算的，因此处理所需的时间与场景复杂性无关。光照将添加到发射缓冲区。</p>
+<p>不穿过相机近平面的点光源和聚光灯被渲染为3D形状，并启用了Z缓冲区针对场景的测试。
+这使得部分或完全遮挡的点光源和聚光灯的渲染成本非常低。穿过近平面的方向光和点或聚光灯被渲染为全屏四边形。</p>
+<p>如果光源启用了阴影，那么也会在此通道中渲染并应用阴影。请注意，阴影并非是“无成本”的；需要渲染阴影投射物，并且必须应用更复杂的光照着色器。</p>
+<p>唯一可用的光照模型是标准 (Standard)
+光照模型。如果需要不同的模型，可修改光照pass着色器，方法是将内置着色器中的
+Internal-DeferredShading.shader
+文件的修改版本放入“Assets”文件夹中名为“Resources”的文件夹内。然后打开
+Graphics 设置（菜单：Edit &gt; Project Settings，然后单击 Graphics
+类别）。将“Deferred”下拉选单改为“Custom
+Shader”。然后，更改当前使用的着色器对应的着色器 (Shader) 选项。</p>
+<h2 id="扩展内建渲染管线">扩展内建渲染管线</h2>
+<p>Unity为我们提供了命令缓冲区(CommandBuffers)来扩展内建渲染管线。一个命令缓冲区(CommandBuffers)是一系列渲染命令列表（例如：渲染目标设置，渲染某个mesh）。你能够安排这些命令在内建渲染管线的某些点上执行，这也允许你自定义并扩展Unity的渲染功能。你能使用Graphics.ExecuteCommandBuffer立即执行CommandBuffers，也可以在渲染管线的某个点执行。通过使用Camera.AddCommandBuffer并传入CameraEvent枚举,
+以及Light.AddCommandBuffer并且传入LightEvent枚举来安排CommandBuffers的执行<a
+href="https://docs.unity3d.com/Manual/GraphicsCommandBuffers.html#order-of-execution">时机</a>。</p>
+<p>对于全部可以执行的命令，参见<a
+href="https://docs.unity3d.com/ScriptReference/Rendering.CommandBuffer.html">CommandBuffer
+API</a>。有些命令仅在特定平台才支持，比如射线追踪就只在DX12上支持。</p>
+<p><a
+href="https://blog.unity.com/technology/extending-unity-5-rendering-pipeline-command-buffers">extending-unity-5-rendering-pipeline-command-buffers</a></p>
+<h2 id="shader基础模板">Shader基础模板</h2>
+<h3 id="前向渲染路径shader模板">前向渲染路径Shader模板</h3>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br></pre></td><td class="code"><pre><span class="line">Shader &quot;Unlit&#x2F;NewUnlitShader&quot;</span><br><span class="line">&#123;</span><br><span class="line">    Properties</span><br><span class="line">    &#123;</span><br><span class="line">        _MainTex (&quot;Texture&quot;, 2D) &#x3D; &quot;white&quot; &#123;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">    SubShader</span><br><span class="line">    &#123;</span><br><span class="line">        Tags &#123; &quot;RenderType&quot;&#x3D;&quot;Opaque&quot; &#125;</span><br><span class="line">        LOD 100</span><br><span class="line"></span><br><span class="line">        Pass</span><br><span class="line">        &#123;</span><br><span class="line">            CGPROGRAM</span><br><span class="line">            #pragma vertex vert</span><br><span class="line">            #pragma fragment frag</span><br><span class="line">            &#x2F;&#x2F; make fog work</span><br><span class="line">            #pragma multi_compile_fog</span><br><span class="line">            </span><br><span class="line">            #include &quot;UnityCG.cginc&quot;</span><br><span class="line"></span><br><span class="line">            struct appdata</span><br><span class="line">            &#123;</span><br><span class="line">                float4 vertex : POSITION;</span><br><span class="line">                float2 uv : TEXCOORD0;</span><br><span class="line">            &#125;;</span><br><span class="line"></span><br><span class="line">            struct v2f</span><br><span class="line">            &#123;</span><br><span class="line">                float2 uv : TEXCOORD0;</span><br><span class="line">                UNITY_FOG_COORDS(1)</span><br><span class="line">                float4 vertex : SV_POSITION;</span><br><span class="line">            &#125;;</span><br><span class="line"></span><br><span class="line">            sampler2D _MainTex;</span><br><span class="line">            float4 _MainTex_ST;</span><br><span class="line">            </span><br><span class="line">            v2f vert (appdata v)</span><br><span class="line">            &#123;</span><br><span class="line">                v2f o;</span><br><span class="line">                o.vertex &#x3D; UnityObjectToClipPos(v.vertex);</span><br><span class="line">                o.uv &#x3D; TRANSFORM_TEX(v.uv, _MainTex);</span><br><span class="line">                UNITY_TRANSFER_FOG(o,o.vertex);</span><br><span class="line">                return o;</span><br><span class="line">            &#125;</span><br><span class="line">            </span><br><span class="line">            fixed4 frag (v2f i) : SV_Target</span><br><span class="line">            &#123;</span><br><span class="line">                &#x2F;&#x2F; sample the texture</span><br><span class="line">                fixed4 col &#x3D; tex2D(_MainTex, i.uv);</span><br><span class="line">                &#x2F;&#x2F; apply fog</span><br><span class="line">                UNITY_APPLY_FOG(i.fogCoord, col);</span><br><span class="line">                return col;</span><br><span class="line">            &#125;</span><br><span class="line">            ENDCG</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    Fallback &quot;ExampleOtherShader&quot;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="延迟渲染路径shader模板">延迟渲染路径Shader模板</h3>
+<h4 id="gbuffer-shader-每个mesh执行一次">GBuffer Shader
+（每个Mesh执行一次）</h4>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br></pre></td><td class="code"><pre><span class="line">Shader &quot;Custom&#x2F;deferred&quot;</span><br><span class="line">&#123;</span><br><span class="line">    &#x2F;&#x2F;unity参数入口 </span><br><span class="line">	Properties</span><br><span class="line">	&#123;</span><br><span class="line">		_MainTex(&quot;贴图&quot;,2D)&#x3D;&quot;white&quot;&#123;&#125;</span><br><span class="line">		_Diffuse(&quot;漫反射&quot;,Color) &#x3D; (1,1,1,1)</span><br><span class="line">		_Specular(&quot;高光色&quot;,Color) &#x3D; (1,1,1,1)</span><br><span class="line">		_Gloss(&quot;平滑度&quot;,Range(1,100)) &#x3D; 50</span><br><span class="line">	&#125;</span><br><span class="line">	SubShader</span><br><span class="line">	&#123;</span><br><span class="line">        &#x2F;&#x2F;非透明队列</span><br><span class="line">		Tags &#123; &quot;RenderType&quot; &#x3D; &quot;Opaque&quot; &#125;</span><br><span class="line">		LOD 100</span><br><span class="line">        &#x2F;&#x2F;延迟渲染</span><br><span class="line">		Pass</span><br><span class="line">		&#123;</span><br><span class="line">            &#x2F;&#x2F;设置 光照模式为延迟渲染</span><br><span class="line">			Tags&#123;&quot;LightMode&quot; &#x3D; &quot;Deferred&quot;&#125;</span><br><span class="line">			CGPROGRAM</span><br><span class="line">				&#x2F;&#x2F; 声明顶点着色器、片元着色器和输出目标</span><br><span class="line">				#pragma target 3.0</span><br><span class="line">				#pragma vertex vert</span><br><span class="line">				#pragma fragment frag</span><br><span class="line">				&#x2F;&#x2F;排除不支持MRT的硬件</span><br><span class="line">				&#x2F;&#x2F;#pragma exclude_renderers norm</span><br><span class="line">				&#x2F;&#x2F; unity 函数库</span><br><span class="line">				#include&quot;UnityCG.cginc&quot;</span><br><span class="line">				&#x2F;&#x2F;定义UNITY_HDR_ON关键字</span><br><span class="line">				&#x2F;&#x2F;在c# 中 Shader.EnableKeyword(&quot;UNITY_HDR_ON&quot;); Shader.DisableKeyword(&quot;UNITY_HDR_ON&quot;);</span><br><span class="line">				&#x2F;&#x2F; 设定hdr是否开启</span><br><span class="line">				#pragma multi_compile __ UNITY_HDR_ON</span><br><span class="line">				&#x2F;&#x2F; 贴图</span><br><span class="line">				sampler2D _MainTex;</span><br><span class="line">				&#x2F;&#x2F; 题图uv处理</span><br><span class="line">				float4 _MainTex_ST;</span><br><span class="line">				&#x2F;&#x2F; 漫反射光</span><br><span class="line">				float4 _Diffuse;</span><br><span class="line">				&#x2F;&#x2F; 高光</span><br><span class="line">				float4 _Specular;</span><br><span class="line">				&#x2F;&#x2F; 平滑度</span><br><span class="line">				float _Gloss;</span><br><span class="line">				&#x2F;&#x2F; 顶点渲染器所传入的参数结构，分别是顶点位置、法线信息、uv坐标</span><br><span class="line">				struct a2v</span><br><span class="line">				&#123;</span><br><span class="line">					float4 pos:POSITION;</span><br><span class="line">					float3 normal:NORMAL;</span><br><span class="line">					float2 uv:TEXCOORD0;</span><br><span class="line">				&#125;;</span><br><span class="line">				&#x2F;&#x2F; 片元渲染器所需的传入参数结构，分别是像素位置、uv坐标、像素世界位置、像素世界法线</span><br><span class="line">				struct v2f</span><br><span class="line">				&#123;</span><br><span class="line">					float4 pos:SV_POSITION;</span><br><span class="line">					float2 uv : TEXCOORD0;</span><br><span class="line">					float3 worldPos:TEXCOORD1;</span><br><span class="line">					float3 worldNormal:TEXCOORD2;</span><br><span class="line">				&#125;;</span><br><span class="line">				&#x2F;&#x2F; 延迟渲染所需的输出结构。前向渲染只需要输出1个Target，而延迟渲染的片元需要输出4个Target  </span><br><span class="line">				struct DeferredOutput</span><br><span class="line">				&#123;</span><br><span class="line">					&#x2F;&#x2F; RGB存储漫反射颜色，A通道存储遮罩</span><br><span class="line">					float4 gBuffer0:SV_TARGET0;</span><br><span class="line">					&#x2F;&#x2F; RGB存储高光（镜面）反射颜色，A通道存储高光反射的指数部分，也就是平滑度</span><br><span class="line">					float4 gBuffer1:SV_TARGET1;</span><br><span class="line">					&#x2F;&#x2F; RGB通道存储世界空间法线，A通道没用</span><br><span class="line">					float4 gBuffer2:SV_TARGET2;</span><br><span class="line">					&#x2F;&#x2F; Emission + lighting + lightmaps + reflection probes (高动态光照渲染&#x2F;低动态光照渲染)用于存储自发光+lightmap+反射探针深度缓冲和模板缓冲</span><br><span class="line">					float4 gBuffer3:SV_TARGET3;</span><br><span class="line">				&#125;;</span><br><span class="line">				&#x2F;&#x2F; 顶点渲染器</span><br><span class="line">				v2f vert(a2v v)</span><br><span class="line">				&#123;</span><br><span class="line">					v2f o;</span><br><span class="line">					&#x2F;&#x2F; 获取裁剪空间下的顶点坐标</span><br><span class="line">					o.pos &#x3D; UnityObjectToClipPos(v.pos);</span><br><span class="line">					&#x2F;&#x2F; 应用uv设置，获取正确的uv</span><br><span class="line">					o.uv &#x3D; TRANSFORM_TEX(v.uv, _MainTex);</span><br><span class="line">					&#x2F;&#x2F; 获取顶点的世界坐标</span><br><span class="line">					o.worldPos &#x3D; mul(unity_ObjectToWorld, v.pos).xyz;</span><br><span class="line">					&#x2F;&#x2F; 获取世界坐标下的法线</span><br><span class="line">					o.worldNormal &#x3D; UnityObjectToWorldNormal(v.normal);</span><br><span class="line">					return o;</span><br><span class="line">				&#125;</span><br><span class="line">				&#x2F;&#x2F; 片元着色器</span><br><span class="line">				DeferredOutput frag(v2f i)</span><br><span class="line">				&#123;</span><br><span class="line">					DeferredOutput o;</span><br><span class="line">					&#x2F;&#x2F; 像素颜色 &#x3D; 贴图颜色 * 漫反射颜色</span><br><span class="line">					fixed3 color &#x3D; tex2D(_MainTex, i.uv).rgb * _Diffuse.rgb;</span><br><span class="line">					&#x2F;&#x2F; 默认使用高光反射输出！！</span><br><span class="line">					o.gBuffer0.rgb &#x3D; color; &#x2F;&#x2F; RGB存储漫反射颜色，A通道存储遮罩</span><br><span class="line">					o.gBuffer0.a &#x3D; 1; &#x2F;&#x2F; 漫反射的透明度</span><br><span class="line">					o.gBuffer1.rgb &#x3D; _Specular.rgb; &#x2F;&#x2F; RGB存储高光（镜面）反射颜色，</span><br><span class="line">					o.gBuffer1.a &#x3D; _Gloss &#x2F; 100; &#x2F;&#x2F; 高光（镜面）反射颜色 的</span><br><span class="line">					o.gBuffer2 &#x3D; float4(i.worldNormal * 0.5 + 0.5, 1); &#x2F;&#x2F; RGB通道存储世界空间法线，A通道没用</span><br><span class="line">					&#x2F;&#x2F; 如果没开启HDR，要给颜色编码转换一下数据exp2，后面在lightpass2里则是进行解码log2</span><br><span class="line">					#if !defined(UNITY_HDR_ON)</span><br><span class="line">						color.rgb &#x3D; exp2(-color.rgb);</span><br><span class="line">					#endif</span><br><span class="line">					&#x2F;&#x2F; Emission + lighting + lightmaps + reflection probes (高动态光照渲染&#x2F;低动态光照渲染)用于存储自发光+lightmap+反射探针深度缓冲和模板缓冲</span><br><span class="line">					o.gBuffer3 &#x3D; fixed4(color, 1);</span><br><span class="line">					return o;</span><br><span class="line">				&#125;</span><br><span class="line">			ENDCG</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="light-shader-每个光源执行一次">Light Shader
+(每个光源执行一次)</h4>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br></pre></td><td class="code"><pre><span class="line">Shader &quot;Unlit&#x2F;deferredLight&quot;</span><br><span class="line">&#123;</span><br><span class="line">    SubShader</span><br><span class="line">    &#123;</span><br><span class="line">        &#x2F;&#x2F; 第一个pass用于合成灯光</span><br><span class="line">        Pass</span><br><span class="line">        &#123;</span><br><span class="line">            &#x2F;&#x2F; 由于像素信息已经经过深度测试，所以可以关闭深度写入</span><br><span class="line">			ZWrite Off</span><br><span class="line">            &#x2F;&#x2F; 如果开启了LDR混合方案就是DstColor zero（当前像素 + 0），</span><br><span class="line">            &#x2F;&#x2F; 如果开启了HDR混合方案就是One One（当前像素 + 缓冲像素），由于延迟渲染就是等于把灯光渲染到已存在的gbuffer上，所以使用one one</span><br><span class="line">			Blend [_SrcBlend] [_DstBlend]</span><br><span class="line">            CGPROGRAM</span><br><span class="line">            &#x2F;&#x2F; 定义运行平台</span><br><span class="line">			#pragma target 3.0</span><br><span class="line">            &#x2F;&#x2F; 我们需要所有的关于灯光的变体，使用multi_compile_lightpass</span><br><span class="line">			#pragma multi_compile_lightpass </span><br><span class="line">            &#x2F;&#x2F; 不使用nomrt着色器</span><br><span class="line">			#pragma exclude_renderers nomrt</span><br><span class="line">            &#x2F;&#x2F;定义UNITY_HDR_ON关键字</span><br><span class="line">			&#x2F;&#x2F;在c# 中 Shader.EnableKeyword(&quot;UNITY_HDR_ON&quot;); Shader.DisableKeyword(&quot;UNITY_HDR_ON&quot;);</span><br><span class="line">			&#x2F;&#x2F; 设定hdr是否开启 </span><br><span class="line">			#pragma multi_compile __ UNITY_HDR_ON</span><br><span class="line">            &#x2F;&#x2F; 定义顶点渲染器和片元渲染器的输入参数</span><br><span class="line">            #pragma vertex vert</span><br><span class="line">            #pragma fragment frag</span><br><span class="line">            &#x2F;&#x2F; 引入shader 相关宏宏</span><br><span class="line">			#include &quot;UnityCG.cginc&quot;</span><br><span class="line">			#include &quot;UnityDeferredLibrary.cginc&quot;</span><br><span class="line">			#include &quot;UnityGBuffer.cginc&quot;</span><br><span class="line">            &#x2F;&#x2F;定义从 Deferred模型对象输入的屏幕像素数据 </span><br><span class="line">			sampler2D _CameraGBufferTexture0;&#x2F;&#x2F; 漫反射颜色</span><br><span class="line">			sampler2D _CameraGBufferTexture1;&#x2F;&#x2F; 高光、平滑度</span><br><span class="line">			sampler2D _CameraGBufferTexture2;&#x2F;&#x2F; 世界法线</span><br><span class="line">            &#x2F;&#x2F;顶点渲染器输出参数结构，包含顶点坐标、法线</span><br><span class="line">			struct a2v</span><br><span class="line">			&#123;</span><br><span class="line">				float4 pos:POSITION;</span><br><span class="line">				float3 normal:NORMAL;</span><br><span class="line">			&#125;;</span><br><span class="line">            &#x2F;&#x2F;片元渲染器输出结构，包含像素坐标、uv坐标</span><br><span class="line">			struct Deffred_v2f</span><br><span class="line">			&#123;</span><br><span class="line">				float4 pos: SV_POSITION;</span><br><span class="line">				float4 uv:TEXCOORD;</span><br><span class="line">				float3 ray : TEXCOORD1;</span><br><span class="line">			&#125;;</span><br><span class="line">            &#x2F;&#x2F; 顶点渲染器</span><br><span class="line">			Deffred_v2f vert(a2v v)</span><br><span class="line">			&#123;</span><br><span class="line">				Deffred_v2f o;</span><br><span class="line">                &#x2F;&#x2F;将顶点坐标从模型坐标转化为裁剪坐标</span><br><span class="line">				o.pos &#x3D; UnityObjectToClipPos(v.pos);</span><br><span class="line">                &#x2F;&#x2F; 获取屏幕上的顶点坐标</span><br><span class="line">				o.uv &#x3D; ComputeScreenPos(o.pos);</span><br><span class="line">                &#x2F;&#x2F; 模型空间转 视角空间做i奥</span><br><span class="line">				o.ray &#x3D;	UnityObjectToViewPos(v.pos) * float3(-1,-1,1);</span><br><span class="line">                &#x2F;&#x2F; 插值</span><br><span class="line">				o.ray &#x3D; lerp(o.ray, v.normal, _LightAsQuad);</span><br><span class="line">				return o;</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">            &#x2F;&#x2F;片段渲染器</span><br><span class="line">            &#x2F;&#x2F;设置片段渲染器输出结果的数据格式。如果开始hdr就使用half4,否则使用fixed4</span><br><span class="line">			#ifdef UNITY_HDR_ON</span><br><span class="line">			    half4</span><br><span class="line">			#else</span><br><span class="line">			    fixed4</span><br><span class="line">			#endif</span><br><span class="line">			frag(Deffred_v2f i) : SV_Target</span><br><span class="line">			&#123;</span><br><span class="line">                &#x2F;&#x2F; 定义光照属性</span><br><span class="line">				float3 worldPos;&#x2F;&#x2F;像素的世界位置</span><br><span class="line">				float2 uv;&#x2F;&#x2F;uv</span><br><span class="line">				half3 lightDir;&#x2F;&#x2F;灯光方向</span><br><span class="line">				float atten;&#x2F;&#x2F; 衰减</span><br><span class="line">				float fadeDist;&#x2F;&#x2F; 衰减距离</span><br><span class="line">                &#x2F;&#x2F;计算灯光数据，并填充光照属性数据，返回灯光的坐标，uv、方向衰减等等</span><br><span class="line">				UnityDeferredCalculateLightParams(i, worldPos, uv, lightDir, atten, fadeDist);</span><br><span class="line"></span><br><span class="line">				&#x2F;&#x2F; 灯光颜色</span><br><span class="line">				half3 lightColor &#x3D; _LightColor.rgb * atten;</span><br><span class="line">                &#x2F;&#x2F;gbuffer与灯光合成后的像素数据</span><br><span class="line">				half4 diffuseColor &#x3D; tex2D(_CameraGBufferTexture0, uv);&#x2F;&#x2F; 漫反射颜色</span><br><span class="line">				half4 specularColor &#x3D; tex2D(_CameraGBufferTexture1, uv);&#x2F;&#x2F; 高光颜色</span><br><span class="line">				float gloss &#x3D; specularColor.a * 100;&#x2F;&#x2F;平滑度</span><br><span class="line">				half4 gbuffer2 &#x3D; tex2D(_CameraGBufferTexture2, uv);&#x2F;&#x2F; 法线</span><br><span class="line">				float3 worldNormal &#x3D; normalize(gbuffer2.xyz * 2 - 1);&#x2F;&#x2F; 世界法线</span><br><span class="line"></span><br><span class="line">                &#x2F;&#x2F; 视角方向 &#x3D; 世界空间的摄像机位置 - 像素的位置</span><br><span class="line">				fixed3 viewDir &#x3D; normalize(_WorldSpaceCameraPos - worldPos);</span><br><span class="line">                &#x2F;&#x2F; 计算高光的方向 &#x3D; 灯光方向与视角方向中间的点</span><br><span class="line">				fixed3 halfDir &#x3D; normalize(lightDir + viewDir);</span><br><span class="line"></span><br><span class="line">                &#x2F;&#x2F; 漫反射 &#x3D; 灯光颜色 * 漫反射颜色 * max（dot（像素世界法线， 灯光方向））</span><br><span class="line">				half3 diffuse &#x3D; lightColor * diffuseColor.rgb * max(0,dot(worldNormal, lightDir));</span><br><span class="line">                &#x2F;&#x2F; 高光 &#x3D;  灯光颜色 * 高光色  * pow(max(0,dot(像素世界法线，计算高光的方向)), 平滑度);</span><br><span class="line">				half3 specular &#x3D; lightColor * specularColor.rgb * pow(max(0,dot(worldNormal, halfDir)),gloss);</span><br><span class="line">                &#x2F;&#x2F; 像素颜色 &#x3D; 漫反射+高光，透明度为1</span><br><span class="line">				half4 color &#x3D; float4(diffuse + specular,1);</span><br><span class="line"></span><br><span class="line">                &#x2F;&#x2F;如果开启了hdr则使用exp2处理颜色</span><br><span class="line">				#ifdef UNITY_HDR_ON</span><br><span class="line">				    return color;</span><br><span class="line">				#else </span><br><span class="line">				    return exp2(-color);</span><br><span class="line">				#endif</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">            ENDCG</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">		&#x2F;&#x2F;转码pass,主要用于LDR转码</span><br><span class="line">		Pass</span><br><span class="line">		&#123;</span><br><span class="line">            &#x2F;&#x2F;使用深度测试，关闭剔除</span><br><span class="line">			ZTest Always</span><br><span class="line">			Cull Off</span><br><span class="line">			ZWrite Off</span><br><span class="line">            &#x2F;&#x2F;模板测试</span><br><span class="line">			Stencil</span><br><span class="line">			&#123;</span><br><span class="line">				ref[_StencilNonBackground]</span><br><span class="line">				readMask[_StencilNonBackground]</span><br><span class="line"></span><br><span class="line">				compback equal</span><br><span class="line">				compfront equal</span><br><span class="line">			&#125;</span><br><span class="line">			CGPROGRAM</span><br><span class="line">            &#x2F;&#x2F;输出平台</span><br><span class="line">			#pragma target 3.0</span><br><span class="line">			#pragma vertex vert</span><br><span class="line">            #pragma fragment frag</span><br><span class="line">            &#x2F;&#x2F; 剔除渲染器</span><br><span class="line">			#pragma exclude_renderers nomrt</span><br><span class="line">            &#x2F;&#x2F;</span><br><span class="line">			#include &quot;UnityCG.cginc&quot;</span><br><span class="line">            &#x2F;&#x2F;缓冲区颜色</span><br><span class="line">			sampler2D _LightBuffer;</span><br><span class="line">            struct a2v</span><br><span class="line">			&#123;</span><br><span class="line">				float4 pos:POSITION;</span><br><span class="line">				float2 uv:TEXCOORD0;</span><br><span class="line">			&#125;;</span><br><span class="line">			struct v2f</span><br><span class="line">			&#123;</span><br><span class="line">				float4 pos:SV_POSITION;</span><br><span class="line">				float2 uv:TEXCOORD0;</span><br><span class="line"></span><br><span class="line">			&#125;;</span><br><span class="line">            &#x2F;&#x2F;顶点渲染器</span><br><span class="line">			v2f vert(a2v v)</span><br><span class="line">			&#123;</span><br><span class="line">				v2f o;</span><br><span class="line">                &#x2F;&#x2F; 坐标转为裁剪空间</span><br><span class="line">				o.pos &#x3D; UnityObjectToClipPos(v.pos);</span><br><span class="line">				o.uv &#x3D; v.uv;</span><br><span class="line">                &#x2F;&#x2F; 通常用于判断D3D平台，在开启抗锯齿的时候图片采样会用到</span><br><span class="line">				#ifdef  UNITY_SINGLE_PASS_STEREO</span><br><span class="line">				    o.uv &#x3D; TransformStereoScreenSpaceTex(o.uv,1.0);</span><br><span class="line">				#endif</span><br><span class="line">				return o;</span><br><span class="line">			&#125;</span><br><span class="line">            &#x2F;&#x2F;片段渲染器</span><br><span class="line">			fixed4 frag(v2f i): SV_Target</span><br><span class="line">			&#123;</span><br><span class="line">				return -log2(tex2D(_LightBuffer,i.uv));</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			ENDCG</span><br><span class="line">		&#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="srp">SRP</h1>
+<p>可编程渲染管线（SRP）是一种可以通过C#脚本控制渲染的技术。URP和HDRP是基于SRP技术开发的。SRP是一个轻量级的API层，我们可以通过这些C#
+API来安排和配置渲染命令。Unity传递这些命令到底层的图形架构，然后发送指令到图形API。我们可以基于SRP创建自定义的渲染管线。</p>
+<h2 id="渲染管线实例和渲染管线资源">渲染管线实例和渲染管线资源</h2>
+<p>每个基于SRP的渲染管线都有两个关键的元素：</p>
+<ul>
+<li><strong>渲染管线实例</strong>，
+这是一个实例类定义渲染管线的功能。它继承至RenderPipeline,
+并且覆写它的Render()方法。</li>
+<li><strong>渲染管线资源</strong>，
+这是一个存储渲染管线实例使用的数据的资源，这个脚本继承至RenderPipelineAsset类并且覆写其中的CreatePipeline方法。</li>
+</ul>
+<h2 id="scriptablerendercontext">ScriptableRenderContext</h2>
+<p>ScriptableRenderContext是自定义C#代码和Unity底层图形代码之间沟通的接口类。</p>
+<h2 id="入口点和回调">入口点和回调</h2>
+<p>当工作在SRP时，使用以下这些确保Unity在特定的时候嗲用你的C#代码</p>
+<ul>
+<li><strong>RenderPipeline.Render</strong>
+是SRP的主入口函数，Unity将自动的调用此函数。如果你写一个自定渲染管线这就你代码开始的地方。</li>
+<li><strong>RenderPipelineManager</strong>
+渲染管线的管理类，此类提供了一些事件，可以订阅这些事件然后执行你的特定代码。
+<ul>
+<li>beginFrameRendering 将产生GC 使用beginContextRendering代替</li>
+<li>endFrameRendering 将产生GC 使用endContextRendering代替</li>
+<li>beginContextRendering</li>
+<li>endContextRendering</li>
+<li>beginCameraRendering</li>
+<li>endCameraRendering</li>
+</ul></li>
+</ul>
+<h2 id="安排和执行渲染命令">安排和执行渲染命令</h2>
+<p>在SRP中，我们可以通过CommandBuffer或直接调用ScriptableRenderContext中的API来安排和执行渲染命令。</p>
+<h3 id="使用scriptablerendercontext-apis">使用ScriptableRenderContext
+APIs</h3>
+<p>在SRP中，ScriptableRenderContext做为与底层图形沟通的接口。SRP的渲染工作是延迟执行的；你可以使用ScriptableRenderContext去构建一个渲染命令列表，然后告诉Unity去执行它们，最后Unity图形架构发送命令到图形API。
+安排渲染命令，有如下方式：</p>
+<ul>
+<li>传递一个CommandBuffer到ScriptableRenderContext,
+通过使用ScriptableRenderContext.ExecuteCommandBuffer.</li>
+<li>直接调用ScriptableRenderContext中的API，比如：ScriptableRenderContext.Cull或ScriptableRenderContext.DrawRenderers.</li>
+</ul>
+<p>当安排好命令后，通过调用ScriptableRenderContext.Submit方法告诉Unity去执行你的命令。注意：不论你是使用的CommandBuffer还是直接调用的API,
+在ScriptableRenderContext中都同样的，并且也只有调用了Submit才会去执行。
+下面这个实例说明了如何通过CommandBuffer安排和执行命令去清除渲染目标：</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">using</span> UnityEngine;</span><br><span class="line"><span class="keyword">using</span> UnityEngine.Rendering;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">ExampleRenderPipeline</span> : <span class="title">RenderPipeline</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">ExampleRenderPipeline</span>(<span class="params"></span>) </span></span><br><span class="line"><span class="function"></span>	&#123;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">override</span> <span class="keyword">void</span> <span class="title">Render</span>(<span class="params">ScriptableRenderContext context, Camera[] cameras</span>)</span> &#123;</span><br><span class="line">        <span class="comment">// 创建并安排命令</span></span><br><span class="line">        <span class="keyword">var</span> cmd = <span class="keyword">new</span> CommandBuffer();</span><br><span class="line">        cmd.ClearRenderTarget(<span class="literal">true</span>, <span class="literal">true</span>, Color.red);</span><br><span class="line">        context.ExecuteCommandBuffer(cmd);</span><br><span class="line">        cmd.Release();</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 告诉Unity执行命令</span></span><br><span class="line">        context.Submit();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="自定义渲染管线">自定义渲染管线</h1>
+<p>Unity提供了两个内置的SRP渲染管线:HDRP和URP。虽然这个两个渲染管线给我们提供了自定义的扩展选项，但是如果你想获取的更多的控制，则可以创建一个自定义的渲染管线。</p>
+<h2 id="基于srp创建自定渲染管线">基于SRP创建自定渲染管线</h2>
+<p>此节将介绍如何基于SRP创建自定义的渲染管线。</p>
+<h3 id="创建一个项目并安装依赖包">创建一个项目并安装依赖包</h3>
+<p>这些说明向您展示如何使用SRP Core包创建自定义渲染管线。 SRP
+Core是由Unity提供的一个包，其中包含可重用的代码，可帮助您创建自己的渲染管线，包括用于使用特定于平台的图形API的样板代码、用于常见渲染操作的实用程序函数和着色器库这些着色器也被URP和HDRP使用的。有关SRP
+Core的更多信息，请参阅<a
+href="https://docs.unity3d.com/Packages/com.unity.render-pipelines.core@12.1/manual/index.html">SRP
+Core软件包文档</a>。</p>
+<ol type="1">
+<li>创建一个新的Unity项目</li>
+<li>在<a
+href="https://github.com/Unity-Technologies/Graphics">SRP源码仓库</a>中下载对应Unity版本的SRP包。</li>
+<li>将下载的包放到工程中
+<ul>
+<li>com.unity.render-pipelines.core : SRP的核心包</li>
+<li>com.unity.render-pipelines.shadergraph
+：一个可视化的shader编辑器</li>
+<li>com.unity.render-pipelines.visualeffectgraph
+：视觉效果图像编辑器</li>
+</ul></li>
+</ol>
+<p>如果你觉得完全去自定一个渲染管线过于复杂，那么你可以基于URP或HDRP进行修改，扩展和自定义你需要修改的部分,需要安装的包如下：</p>
+<p><strong>URP：</strong></p>
+<ul>
+<li>com.unity.render-pipelines.core</li>
+<li>com.unity.render-pipelines.shadergraph</li>
+<li>com.unity.render-pipelines.universal</li>
+</ul>
+<p><strong>HDRP:</strong></p>
+<ul>
+<li>com.unity.render-pipelines.core</li>
+<li>com.unity.render-pipelines.shadergraph</li>
+<li>com.unity.render-pipelines.high-defintion</li>
+</ul>
+<h2
+id="创建渲染管线资源和渲染管线实例">创建渲染管线资源和渲染管线实例</h2>
+<p>创建自定义的渲染管线，在项目中必须包含：</p>
+<ul>
+<li>一个继承至RenderPipelineAsset类并覆写了CreatePipeline方法的脚本。这个脚本定义了渲染管线的资源。</li>
+<li>一个继承至RenderPipeline，并且覆写了Render方法的脚步，这个脚本定义了渲染管线的实例。</li>
+</ul>
+<p>因为这些元素都是紧密相关的，必须同时创建。</p>
+<h3 id="创建基础的渲染管线资源和实例">创建基础的渲染管线资源和实例</h3>
+<p>实例代码如下：</p>
+<p><strong>渲染资源脚本：</strong> <figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">using</span> UnityEngine;</span><br><span class="line"><span class="keyword">using</span> UnityEngine.Rendering;</span><br><span class="line"></span><br><span class="line">[<span class="meta">CreateAssetMenu(menuName = <span class="meta-string">"Rendering/ExampleRenderPipelineAsset"</span>)</span>]</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">ExampleRenderPipelineAsset</span> : <span class="title">RenderPipelineAsset</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// Unity在第一帧渲染前调用这个方法，如果渲染管线的设置改变，Unity将销毁当前的渲染管线实例，并调用此方法重新创建一个</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">override</span> RenderPipeline <span class="title">CreatePipeline</span>(<span class="params"></span>)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> ExampleRenderPipelineInstance();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p><strong>渲染实例脚本：</strong></p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">using</span> UnityEngine;</span><br><span class="line"><span class="keyword">using</span> UnityEngine.Rendering;</span><br><span class="line">    </span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">ExampleRenderPipelineInstance</span> : <span class="title">RenderPipeline</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ExampleRenderPipelineInstance</span>(<span class="params"></span>)</span> &#123; &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">override</span> <span class="keyword">void</span> <span class="title">Render</span> (<span class="params">ScriptableRenderContext context, Camera[] cameras</span>)</span> &#123;</span><br><span class="line">        <span class="comment">// 渲染主入口</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3
+id="创建可配置的渲染管线资源和实例">创建可配置的渲染管线资源和实例</h3>
+<p>默认情况下，渲染管线资源存储关于用于渲染的渲染管线实例以及默认材质和着色器的信息。
+在您的RenderPipelineAsset脚本中，您可以扩展您的渲染管线资源，以便它存储额外的数据，并且您可以在您的项目中拥有多个具有不同配置的不同渲染管线资源。例如，您可以使用渲染管线资源来保存每个不同硬件层的配置数据。
+高清渲染管线 (HDRP) 和通用渲染管线 (URP) 包括这方面的示例。</p>
+<p>以下示例展示了如何创建一个RenderPipelineAsset脚本，该脚本定义一个带有公共数据的渲染管线资源，您可以使用Inspector窗口为每个实例设置这些数据，以及在其构造函数中接收渲染管线资源并使用这些数据。</p>
+<p>实例代码如下：</p>
+<p><strong>渲染资源脚本：</strong> <figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">using</span> UnityEngine;</span><br><span class="line"><span class="keyword">using</span> UnityEngine.Rendering;</span><br><span class="line"></span><br><span class="line">[<span class="meta">CreateAssetMenu(menuName = <span class="meta-string">"Rendering/ExampleRenderPipelineAsset"</span>)</span>]</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">ExampleRenderPipelineAsset</span> : <span class="title">RenderPipelineAsset</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 定义的数据</span></span><br><span class="line">    <span class="keyword">public</span> Color exampleColor;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">string</span> exampleString;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">override</span> RenderPipeline <span class="title">CreatePipeline</span>(<span class="params"></span>)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> ExampleRenderPipelineInstance(<span class="keyword">this</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p><strong>渲染实例脚本：</strong></p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">using</span> UnityEngine;</span><br><span class="line"><span class="keyword">using</span> UnityEngine.Rendering;</span><br><span class="line">    </span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">ExampleRenderPipelineInstance</span> : <span class="title">RenderPipeline</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">private</span> ExampleRenderPipelineAsset renderPipelineAsset;</span><br><span class="line"> </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ExampleRenderPipelineInstance</span>(<span class="params">ExampleRenderPipelineAsset asset</span>)</span> &#123;</span><br><span class="line">        renderPipelineAsset = asset;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">override</span> <span class="keyword">void</span> <span class="title">Render</span>(<span class="params">ScriptableRenderContext context, Camera[] cameras</span>)</span> &#123;</span><br><span class="line">        Debug.Log(renderPipelineAsset.exampleString);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="创建一个简单的渲染循环">创建一个简单的渲染循环</h2>
+<p>渲染循环是在单个帧中发生的所有渲染操作的术语。此节代码示例说明使用SRP的基础概念。你能使用这些信息去构建自己的自定可编程渲染管线，也可以用于理解SRP是如何工作的。</p>
+<h3 id="准备你的项目">准备你的项目</h3>
+<p>在开始写渲染循环之前，你必须准备你的项目，步骤如下：</p>
+<ol type="1">
+<li>创建一个SRP兼容的shader。</li>
+<li>创建一个或多个渲染的对象。</li>
+<li>创建自定义SRP的基础结构。</li>
+<li>可选步骤，如果你计划去扩展简单的自定SRP去添加一些更复杂的功能，安装SRP核心包。SRP核心包包含SRP的shader库（能使用这些shader去保证Batcher的兼容性），并且还包含了一些通用的操作逻辑功能。更多信息，参见<a
+href="https://docs.unity3d.com/Packages/com.unity.render-pipelines.core@latest">SRP核心包文档</a>。</li>
+</ol>
+<h3 id="创建一个srp兼容shader">创建一个SRP兼容shader</h3>
+<p>在SRP中，使用Pass的LightMode标记确定几何对象将如何绘制。更多Pass的标记参见<a
+href="https://docs.unity3d.com/Manual/SL-PassTags.html">ShaderLab</a></p>
+<p>本节的任务是使用LightMode为ExampleLightModeTag的标记来创建一个非常简单的无光照的Shader对象。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F; 无光照，不兼容SRP Batcher的Shader</span><br><span class="line">Shader &quot;Examples&#x2F;SimpleUnlitColor&quot;</span><br><span class="line">&#123;</span><br><span class="line">    SubShader</span><br><span class="line">    &#123;</span><br><span class="line">        Pass</span><br><span class="line">        &#123;</span><br><span class="line">            &#x2F;&#x2F; 必须于ScriptableRenderContext.DrawRenderer中的ShaderTagId匹配</span><br><span class="line">            Tags &#123; &quot;LightMode&quot; &#x3D; &quot;ExampleLightModeTag&quot;&#125;</span><br><span class="line"></span><br><span class="line">            HLSLPROGRAM</span><br><span class="line">            #pragma vertex vert</span><br><span class="line">            #pragma fragment frag</span><br><span class="line"></span><br><span class="line">    		float4x4 unity_MatrixVP;</span><br><span class="line">            float4x4 unity_ObjectToWorld;</span><br><span class="line"></span><br><span class="line">            struct Attributes</span><br><span class="line">            &#123;</span><br><span class="line">                float4 positionOS   : POSITION;</span><br><span class="line">            &#125;;</span><br><span class="line"></span><br><span class="line">            struct Varyings</span><br><span class="line">            &#123;</span><br><span class="line">                float4 positionCS : SV_POSITION;</span><br><span class="line">            &#125;;</span><br><span class="line"></span><br><span class="line">            Varyings vert (Attributes IN)</span><br><span class="line">            &#123;</span><br><span class="line">                Varyings OUT;</span><br><span class="line">                float4 worldPos &#x3D; mul(unity_ObjectToWorld, IN.positionOS);</span><br><span class="line">                OUT.positionCS &#x3D; mul(unity_MatrixVP, worldPos);</span><br><span class="line">                return OUT;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            float4 frag (Varyings IN) : SV_TARGET</span><br><span class="line">            &#123;</span><br><span class="line">                return float4(0.5,1,0.5,1);</span><br><span class="line">            &#125;</span><br><span class="line">            ENDHLSL</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="创建渲染对象">创建渲染对象</h3>
+<p>为了测试渲染循环，必须创建一些东西进行渲染。Unity标准流程。</p>
+<h3 id="创建自定义srp的基础结构">创建自定义SRP的基础结构</h3>
+<p>前面章节所描述的步骤：</p>
+<ol type="1">
+<li>创建渲染管线资源和渲染管线实例脚本</li>
+<li>将当前创建的管线资源设置为激活的渲染管线</li>
+</ol>
+<h3 id="创建渲染循环">创建渲染循环</h3>
+<p>在一个简单的渲染循环中，基础的操作是：</p>
+<ul>
+<li>清理渲染目标，主要的目的是移除上一帧渲染的对象。</li>
+<li>剔除，主要作用是过滤掉摄像机完全看不见的对象。</li>
+<li>绘制，告诉GPU那些对象要绘制，以及如何绘制。</li>
+</ul>
+<h4 id="清理渲染目标">清理渲染目标</h4>
+<p>清理意味着清楚上一帧绘制的所有对象。渲染目标一般是屏幕，当然也能是RT。</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">using</span> UnityEngine;</span><br><span class="line"><span class="keyword">using</span> UnityEngine.Rendering;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">ExampleRenderPipeline</span> : <span class="title">RenderPipeline</span> &#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ExampleRenderPipeline</span>(<span class="params"></span>)</span> &#123;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">override</span> <span class="keyword">void</span> <span class="title">Render</span> (<span class="params">ScriptableRenderContext context, Camera[] cameras</span>)</span> &#123;</span><br><span class="line">        <span class="keyword">var</span> cmd = <span class="keyword">new</span> CommandBuffer();</span><br><span class="line">        cmd.ClearRenderTarget(<span class="literal">true</span>, <span class="literal">true</span>, Color.black);</span><br><span class="line">        context.ExecuteCommandBuffer(cmd);</span><br><span class="line">        cmd.Release();</span><br><span class="line"></span><br><span class="line">        context.Submit();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="剔除">剔除</h4>
+<p>剔除是过滤掉相机不可见的对象。在SRP中，剔除需要如下步骤：</p>
+<ol type="1">
+<li>构建关于相机的ScriptableCullingParameters结构体，可以通过调用Camera.TryGetCullingParameters来获取。</li>
+<li>可以选步骤，可以手动的方式构建ScriptableCullingParameters结构体。</li>
+<li>调用ScriptableRenderContext.Cull,
+并将结果存儲在CullingResults结构体中。</li>
+</ol>
+<p>代码如下：</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">using</span> UnityEngine;</span><br><span class="line"><span class="keyword">using</span> UnityEngine.Rendering;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">ExampleRenderPipeline</span> : <span class="title">RenderPipeline</span> &#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ExampleRenderPipeline</span>(<span class="params"></span>)</span> &#123;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">override</span> <span class="keyword">void</span> <span class="title">Render</span> (<span class="params">ScriptableRenderContext context, Camera[] cameras</span>)</span> &#123;</span><br><span class="line">        <span class="keyword">var</span> cmd = <span class="keyword">new</span> CommandBuffer();</span><br><span class="line">        cmd.ClearRenderTarget(<span class="literal">true</span>, <span class="literal">true</span>, Color.black);</span><br><span class="line">        context.ExecuteCommandBuffer(cmd);</span><br><span class="line">        cmd.Release();</span><br><span class="line"></span><br><span class="line">		<span class="comment">// 遍历所有相机</span></span><br><span class="line">        <span class="keyword">foreach</span> (Camera camera <span class="keyword">in</span> cameras)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="comment">// 获取剔除参数</span></span><br><span class="line">            camera.TryGetCullingParameters(<span class="keyword">out</span> <span class="keyword">var</span> cullingParameters);</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 剔除并存储剔除结果</span></span><br><span class="line">            <span class="keyword">var</span> cullingResults = context.Cull(<span class="keyword">ref</span> cullingParameters);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// 通知图像API执行命令</span></span><br><span class="line">        context.Submit();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="绘制">绘制</h4>
+<p>绘图是指示图形API以给定设置绘制一组给定几何图形的过程。在SRP中的绘制应有以下步骤：</p>
+<ol type="1">
+<li>执行剔除（上一节描述的），并存储结果在CullingResults结构体中。</li>
+<li>创建并且配置FilteringSetting结构体，此结构描述了如果去过滤剔除结果。</li>
+<li>创建并配置DrawingSettings结构体，
+此结构描述哪些几何体将被绘制以及如何绘制它。</li>
+<li>可以选步骤，默认Unity基于Shader对象设置渲染状态(深度，蒙版和模板等)。如果你想对一些或所有打算绘制的几何对象覆写这些渲染状态，你能使用RenderStateBlock结构体去做这件事情。</li>
+<li>调用ScriptableRenderContext.DrawRenderers，并传递上面创建的结构体对象。Unity将根据上面的设置的信息进行绘制。</li>
+</ol>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">using</span> UnityEngine;</span><br><span class="line"><span class="keyword">using</span> UnityEngine.Rendering;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">ExampleRenderPipeline</span> : <span class="title">RenderPipeline</span> &#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ExampleRenderPipeline</span>(<span class="params"></span>)</span> &#123;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">override</span> <span class="keyword">void</span> <span class="title">Render</span> (<span class="params">ScriptableRenderContext context, Camera[] cameras</span>)</span> &#123;</span><br><span class="line">        <span class="keyword">var</span> cmd = <span class="keyword">new</span> CommandBuffer();</span><br><span class="line">        cmd.ClearRenderTarget(<span class="literal">true</span>, <span class="literal">true</span>, Color.black);</span><br><span class="line">        context.ExecuteCommandBuffer(cmd);</span><br><span class="line">        cmd.Release();</span><br><span class="line">        </span><br><span class="line">       <span class="comment">// 遍历所有相机</span></span><br><span class="line">        <span class="keyword">foreach</span> (Camera camera <span class="keyword">in</span> cameras)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="comment">// 获取剔除参数</span></span><br><span class="line">            camera.TryGetCullingParameters(<span class="keyword">out</span> <span class="keyword">var</span> cullingParameters);</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 剔除并存储剔除结果</span></span><br><span class="line">            <span class="keyword">var</span> cullingResults = context.Cull(<span class="keyword">ref</span> cullingParameters);</span><br><span class="line">            </span><br><span class="line">			<span class="comment">//设置视图、投影和剪切平面全局着色器变量。</span></span><br><span class="line">            context.SetupCameraProperties(camera);</span><br><span class="line">            </span><br><span class="line">			<span class="comment">//根据 LightMode Pass 标签值，告诉Unity要绘制哪个几何图形</span></span><br><span class="line">            ShaderTagId shaderTagId = <span class="keyword">new</span> ShaderTagId(<span class="string">"ExampleLightModeTag"</span>);</span><br><span class="line"></span><br><span class="line">			<span class="comment">// 告诉Unity，基于当前相机该如何去排序</span></span><br><span class="line">            <span class="keyword">var</span> sortingSettings = <span class="keyword">new</span> SortingSettings(camera);</span><br><span class="line">            </span><br><span class="line">			<span class="comment">// 创建用于描述需要绘制的几何体，以及如何绘制他们</span></span><br><span class="line">            DrawingSettings drawingSettings = <span class="keyword">new</span> DrawingSettings(shaderTagId, sortingSettings);</span><br><span class="line">            </span><br><span class="line">			<span class="comment">// 告诉Unity如何去过滤裁剪的结果，进一步指定要绘制的几何体</span></span><br><span class="line">			<span class="comment">// 使用FilteringSettings.defaultValue指定不进行过滤</span></span><br><span class="line">            FilteringSettings filteringSettings = FilteringSettings.defaultValue;</span><br><span class="line">        </span><br><span class="line">            <span class="comment">// 基于前面的设置绘制几何体</span></span><br><span class="line">            context.DrawRenderers(cullingResults, <span class="keyword">ref</span> drawingSettings, <span class="keyword">ref</span> filteringSettings);</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 安排天空盒子的绘制</span></span><br><span class="line">            <span class="keyword">if</span> (camera.clearFlags == CameraClearFlags.Skybox &amp;&amp; RenderSettings.skybox != <span class="literal">null</span>)</span><br><span class="line">            &#123;</span><br><span class="line">                context.DrawSkybox(camera);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 提交执行</span></span><br><span class="line">            context.Submit();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="urp">URP</h1>
+<p>URP是Unity基于SRP创建的渲染管线。URP提供了艺术家友好的工作流程让你能够快速且容易的创建跨越多个平台的图形，从移动端到高端的控制台和PCs。</p>
+<h2 id="渲染管线概念">渲染管线概念</h2>
+<h3 id="urp资源">URP资源</h3>
+<p>任何基于URP的Unity项目都必须有URP资源去配置相关的设置。URP资源控制了各种图形和质量设置。它是继承至RenderPipelineAsset的可编程对象。当你在Graphics设置中将URP资源后，Unity将自动切换到URP管线。我们可以有多个URP资源并且可以来回切换。</p>
+<p>具体的URP资源的配置信息参见<a
+href="https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@14.0/manual/universalrp-asset.html">官方文档</a></p>
+<h3 id="urp全局设置">URP全局设置</h3>
+<p>如果你的项目安装了URP的包，Unity将在Project
+Setting窗口中的Graphic页签里显示URP的全局设置。 <img
+src="/images/unity/graphics/global.png" alt="URP全局设置" /></p>
+<p>具体设置参见<a
+href="https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@14.0/manual/urp-global-settings.html">官方文档</a></p>
+<h3 id="渲染器">渲染器</h3>
+<p>URP的渲染器实现了两个渲染路径：</p>
+<ul>
+<li>前向渲染路径</li>
+<li>延迟渲染路径</li>
+</ul>
+<p>两渲染路径的对比如下： <img src="/images/unity/graphics/urp_path.png"
+alt="URP渲染路径对比" /></p>
+<h3 id="渲染器特性">渲染器特性</h3>
+<p>渲染器特性是一种资源，可让您将额外的渲染通道添加到URP渲染器并配置其行为。URP包含预构建的名为渲染对象
+(Render Objects)
+的渲染器特性。有关如何向渲染器添加渲染器特性的信息，请参阅<a
+href="https://docs.unity3d.com/cn/Packages/com.unity.render-pipelines.universal@12.1/manual/urp-renderer-feature-how-to-add.html">如何向渲染器添加渲染器功能页面</a>。</p>
+<p>Unity自带支持3种渲染特性： 1. 渲染对象特性（Render Objects） 2.
+环境光遮挡（Ambient Occlusion） 3. 贴花（Decal）</p>
+<h2 id="灯光">灯光</h2>
+<p>使用URP能实现适合艺术风格范围内的真实光照。Unity的所有渲染管线共享光照功能，但是不同的渲染管线也有一些重要的不同。
+URP不同于Unity的通用光照功能的特性如下：</p>
+<ul>
+<li>在灯光组件的Inspector窗口中，显示了一些URP特定的选项</li>
+<li>在灯光组件上有Universal Additional Light
+Data组件，存储了与URP管线相关的数据。</li>
+<li>从URP12开始支持Enlighten的实时全局光照。</li>
+</ul>
+<p>内建渲染管线和URP灯光之间的特性差异，能参见<a
+href="https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@13.1/manual/universalrp-builtin-feature-comparison.html">灯光特性对比表</a></p>
+<h2 id="相机">相机</h2>
+<p>URP中的相机是基于Unity的标准相机的，但是也有一些明显的区别。如下：</p>
+<ul>
+<li>Universal Additional Camera
+Data组件，扩展标准相机的功能，并允许URP存储相机相关的数据。</li>
+<li>渲染类型（Render
+Type）设置，定义了URP中的两种类型的相机：Base和Overlay。</li>
+<li>相机堆叠（Camera Stacking）系统,
+允许你去层化多个相机的输出到一个合并后的输出。</li>
+<li>Volume系统，允许基于场景的给定位置去应用后处理效果。</li>
+<li>相机组件，在Inspector中暴露了URP特定的选项。</li>
+</ul>
+<h2 id="后处理">后处理</h2>
+<p>URP包含了一个整合的后处理效果，如果你使用的URP，将不再需要额外安装后处理包了。URP不兼容Post
+Processing Stack
+v2包。URP使用Volume系统框架来现实后处理效果。Volumes能够覆写或扩展场景属性，依赖每个Volume相对于相机的位置。URP
+为Volumes实现了专用的GameObjects：Global Volume, Box Volume, Sphere
+Volume, Convex Mesh Volume. <img
+src="/images/unity/graphics/volume-volume-types.png" alt="体类型" /></p>
+<p>Volume组件引用了一个Volume Profile的文件。Volume
+Profile文件包含了每个属性的默认值并默认这些属性是隐藏的。 Volume
+Overrides让你改变或扩展这些在Volume Profile上的默认值。
+在运行时，URP将便利那些启用了Volume组件的激活对象，比并且确定每个Volume组件的在最终场景设置中的贡献。URP使用相机位置和Volume组件属性去计算这些贡献值。URP将从所有有贡献的Volumes中插值得到最终的属性值。</p>
+<p>URP支持的后处理效果有： - Bloom - Channel Mixed - Chromatic
+Aberration - Color Adjustments - Color Curves - Depth of Field - Film
+Grain - Lens Distortion - Lift Gamma Gain - Motion Blur - Panini
+Projection - Shadows Midtones Highlights - Split Toning - Tonemapping -
+Vignette - White Balance - Lens Flare</p>
+<h2 id="着色器和材质">着色器和材质</h2>
+<p>URP提供了以下的一些着色器来满足大多数的使用场景：</p>
+<ul>
+<li>Complex Lit
+（包含所有Lit着色器的共功能并添加一些高级材质特性，此着色器中的某些功能可能会占用更多资源并且需要Unity
+Shader Model 4.5的硬件）</li>
+<li>Lit （PBS光照模型）</li>
+<li>Simple Lit （Blinn-Phong光照模型）</li>
+<li>Baked Lit （烘培光）</li>
+<li>Unlit （无光照）</li>
+<li>Terrain Lit （地形）</li>
+<li>Particles Lit （粒子PBS光照模型）</li>
+<li>Particles Simple Lit（粒子Blinn-Phong光照模型）</li>
+<li>Particles Unlit （粒子无光照）</li>
+<li>SpeedTree （SpeedTree特定着色器）</li>
+<li>Decal （贴花）</li>
+</ul>
+<h3 id="选择着色器">选择着色器</h3>
+<p>URP提供了PBS和非PBS的光照着色器。对于PBS，使用Lit着色器。你能够使用它在所有的平台。这个Shader的质量适应性依赖平台，但保持在所有平台都是基于物理的渲染。Unity内建渲染管线的Standard和Standard（Specular）着色器都对应于URP的Lit着色器。内建渲染管线的和URP的着色器映射表参见<a
+href="https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@11.0/manual/shaders-in-universalrp.html">着色器映射</a>。
+如果您的目标是功能较弱的设备，或者你的项目只有简单的着色需求，使用Simple
+Lit着色器，此着色器是非PBS的光照模型。
+如果你不需要实时灯光，或者宁愿只使用烘焙光照和采样全局光照，选择Baked
+Lit着色器。 如果你不需要光照，可以使用Unlit着色器。</p>
+<h3 id="srp批处理器兼容">SRP批处理器兼容</h3>
+<p>确保SRP批处理器兼容着色器需要满足以下要求：</p>
+<ul>
+<li>声明所有材质属性在一个名为UnityPerMaterial的CBUFFER中。</li>
+<li>声明所有的内建引擎属性（比如：unity_ObjectToWorld 或
+unity_WorldTransformParams）在一个名为UnityPerDraw的CBUFFER中。</li>
+</ul>
+<h3 id="着色器剔除">着色器剔除</h3>
+<p>Unity从单个Shader源文件编译许多Shader变体。着色器变体的数量取决于您在着色器中包含多少关键字。
+在默认着色器中，通用渲染管线 (URP) 使用一组关键字用于照明和阴影。
+URP可以排除某些着色器变体，具体取决于URP资源中哪些功能处于活动状态。当您禁用
+URP 资源中的某些功能时，管道会从构建中“剥离”相关的着色器变体。
+剥离着色器可让您获得更小的构建尺寸和更短的构建时间。
+如果您的项目永远不会使用某些功能或关键字，这将非常有用。例如，您可能有一个项目，您从不将阴影用于定向灯。
+如果没有着色器剥离，具有定向阴影支持的着色器变体仍保留在构建中。
+如果您知道根本不会使用这些阴影，则可以取消选中 URP
+资源中的投射阴影以获得主或附加方向灯。 URP
+然后从构建中去除这些着色器变体。具体的剔除方法参见<a
+href="https://blog.unity.com/technology/stripping-scriptable-shader-variants">剔除可编程着色器变体</a></p>
+<h3 id="urp-shaderlab-pass-标记">URP ShaderLab Pass 标记</h3>
+<p>LightMode标记让管道确定在执行渲染管道的不同部分时使用哪个Pass。如果你在Pass中不设置LightMode标记，URP将使用SRPDefaultUnlit作为LightModede的值。在URP中，
+LightMode标记可以有下面的值：</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>属性</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UniversalForward</td>
+<td>Pass渲染对象几何体并评估所有光的贡献。
+URP在前向渲染路径中使用此标记值。</td>
+</tr>
+<tr>
+<td>UniversalGBuffer</td>
+<td>Pass渲染对象几何体但不评估任何光贡献。
+URP在延迟渲染路径中使用此标记值。</td>
+</tr>
+<tr>
+<td>UniversalForwardOnly</td>
+<td>Pass渲染对象几何体并评估所有光贡献，类似于LightMode为UniversalForward时。与UniversalForward的不同之处在于，URP可以将Pass用于前向和延迟渲染路径。如果在URP使用延迟渲染路径时某个通道必须使用前向渲染路径渲染对象，请使用此值。
+例如，如果URP使用延迟渲染路径渲染场景并且场景包含具有不适合GBuffer的着色器数据的对象（例如透明涂层法线），则使用此标记。如果着色器必须同时在前向和延迟渲染路劲中渲染，请使用UniversalForward和UniversalGBuffer标签值声明两个Pass。
+如果着色器必须使用前向渲染路径进行渲染，而不管URP渲染器使用的渲染路径，请仅声明一个将LightMode标记设置为UniversalForwardOnly的Pass。</td>
+</tr>
+<tr>
+<td>Universal2D</td>
+<td>Pass渲染对象并评估2D光贡献。 URP在2D渲染器中使用此标记值。</td>
+</tr>
+<tr>
+<td>ShadowCaster</td>
+<td>Pass将物体深度从灯光的角度渲染到阴影贴图或深度纹理中。</td>
+</tr>
+<tr>
+<td>DepthOnly</td>
+<td>Pass仅将来自相机视角的深度信息渲染到深度纹理中。</td>
+</tr>
+<tr>
+<td>Meta</td>
+<td>Unity仅在Unity编辑器中烘焙光照贴图时执行此Pass。
+Unity在构建Player时会从着色器中剥离此通道。</td>
+</tr>
+<tr>
+<td>SRPDefaultUnlit</td>
+<td>渲染对象时使用此LightMode标记值绘制额外的Pass。
+应用示例：绘制对象轮廓。
+此标记值对前向和延迟渲染路径均有效。当Pass没有LightMode标记时，URP使用此标记值作为默认值。</td>
+</tr>
+</tbody>
+</table>
+<h2 id="d图形特性">2D图形特性</h2>
+<p>URP包含的2D功能是2D
+Lighting图形管道，可让您创建2D灯光和2D照明效果;并且用于在您的项目中实现像素化视觉风格的
+2D 像素完美相机。 以下是包的 Light 2D 组件中包含的不同 2D 灯光类型：</p>
+<ul>
+<li>Freeform</li>
+<li>Sprite</li>
+<li>Spot</li>
+<li>Global</li>
+</ul>
+<p>URP附带的2D光照系统由一组艺术家友好的工具和运行时组件组成，可帮助您通过核心Unity组件（例如
+Sprite
+Renderer）和2D光照组件快速创建光照2D场景，这些组件充当熟悉的3D光照的2D对应物。这些工具旨在与2D渲染器无缝集成，例如
+Sprite Renderer、Tilemap Renderer 和 Sprite Shape Renderer。
+该工具和组件系统针对移动系统和在多个平台上运行进行了优化。</p>
+<h3 id="d灯光实现细节">2D灯光实现细节</h3>
+<p>2D Lighting图形管线渲染过程可以分为2个不同的阶段： 1.
+绘制光照渲染纹理 2. 绘制渲染器</p>
+<p>灯光渲染纹理是包含有关屏幕空间中灯光颜色和形状信息的渲染纹理。这两个阶段仅针对每组明显照明的
+Light Layers 重复。 换句话说，如果 Sorting Layers 1 到 4
+具有完全相同的一组
+Lights，则它只会执行上述一组操作。默认设置允许在绘制渲染器之前提前绘制多个批次，以减少目标切换。
+理想的设置将允许管道为所有批次渲染光渲染纹理，然后才继续绘制渲染器。
+这可以防止加载和卸载颜色目标。 有关更多详细信息，请参阅<a
+href="https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@11.0/manual/Lights-2D-intro.html#optimization">优化</a>。</p>
+<h4 id="前期计算排序层批处理">前期：计算排序层批处理</h4>
+<p>在继续渲染阶段之前，2D Lighting
+图形管道首先分析场景，以评估哪些图层可以在单个绘制操作中批量处理。
+以下是确定图层是否一起批处理的标准：</p>
+<ol type="1">
+<li>它们是连续的层。</li>
+<li>他们共享完全相同的一组灯光。</li>
+</ol>
+<p>强烈建议批处理尽可能多的图层，以最大限度地减少光渲染纹理绘制操作的数量并提高性能。</p>
+<h4 id="阶段-1绘制光渲染纹理">阶段 1：绘制光渲染纹理</h4>
+<p>在预阶段批处理之后，管道然后为该批处理绘制光照纹理。这基本上将灯光的形状绘制到渲染纹理上。
+根据灯光的设置，可以使用Additive或Alpha
+Blended将灯光的颜色和形状混合到目标灯管的渲染纹理上。</p>
+<figure>
+<img src="/images/unity/graphics/introduction_phase1.png"
+alt="阶段一" />
+<figcaption aria-hidden="true">阶段一</figcaption>
+</figure>
+<p>值得注意的是，仅当至少有一个2D光以它为目标时才会创建光渲染纹理。
+例如，如果一个图层的所有灯光只使用 Blendstyle
+#1，那么只会创建一个灯光渲染纹理。</p>
+<h4 id="第-2-阶段绘制渲染器">第 2 阶段：绘制渲染器</h4>
+<p>绘制完所有光照渲染纹理后，管道将继续绘制渲染器。
+系统将跟踪哪组渲染器是由哪组光渲染纹理绘制的。
+它们在前期阶段的批处理过程中关联。绘制渲染器时，它将可以访问所有（每种混合样式一个）可用的光渲染纹理。
+在着色器中，通过使用指定操作将输入颜色与来自灯光的渲染纹理的颜色组合来计算最终颜色。</p>
+<figure>
+<img src="/images/unity/graphics/introduction_phase2.png"
+alt="阶段二" />
+<figcaption aria-hidden="true">阶段二</figcaption>
+</figure>
+<p>具有四种活动混合样式的设置示例，说明了多种混合样式如何组合在一起。
+在大多数情况下，您通常只需要两种混合样式即可获得所需的效果。</p>
+<h3 id="d-pixel-perfect">2D Pixel Perfect</h3>
+<p>2D Pixel Perfect套件包含 Pixel
+Perfect相机组件，可确保您的像素艺术在不同分辨率下保持清晰，并且在运动情况下也能保持清晰。它是一个单一的组件，可以进行Unity所需的所有计算，以随分辨率变化缩放视口，因此您无需手动进行。您可以使用此组件设置来调整相机视口中渲染像素艺术的定义，并且可以使用“在编辑模式下运行”功能在游戏视图中立即预览任何更改。</p>
+<p>URP管线的具体的实现细节，打算后续对URP的源码进行阅读，待续...</p>
+<h1 id="hdrp">HDRP</h1>
+<p>现阶段手游开发不会用到此渲染管线。</p>
+<h1 id="原文">原文</h1>
+<p>[1] <a
+href="https://docs.unity3d.com/Manual/render-pipelines.html">Render
+pipelines https://docs.unity3d.com/Manual/render-pipelines.html</a></p>
+<p>[2] <a
+href="https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@14.0/manual/index.html">Universal
+Render Pipeline
+https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@14.0/manual/index.html</a></p>
+<p>[3] <a
+href="https://docs.unity3d.com/Packages/com.unity.render-pipelines.high-definition@14.0/manual/index.html">High
+Definition Render Pipeline
+https://docs.unity3d.com/Packages/com.unity.render-pipelines.high-definition@14.0/manual/index.html</a></p>
+<p>[4] <a
+href="https://blog.csdn.net/lengyoumo/article/details/104489830">unity
+shader 实现延迟渲染代码加注释
+https://blog.csdn.net/lengyoumo/article/details/104489830</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/Rendering/" rel="tag"><i class="fa fa-tag"></i> Rendering</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/" rel="next" title="UGUI基础">
+                  <i class="fa fa-chevron-left"></i> UGUI基础
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2021/11/29/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/Lua/Lua%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/" rel="prev" title="Lua虚拟机源码阅读">
+                  Lua虚拟机源码阅读 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#什么渲染管线"><span class="nav-number">1.</span> <span class="nav-text">什么渲染管线</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#内建管线"><span class="nav-number">2.</span> <span class="nav-text">内建管线</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#渲染路径"><span class="nav-number">2.1.</span> <span class="nav-text">渲染路径</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#前向渲染路径"><span class="nav-number">2.1.1.</span> <span class="nav-text">前向渲染路径</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#基础pass"><span class="nav-number">2.1.1.1.</span> <span class="nav-text">基础pass</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#附加pass"><span class="nav-number">2.1.1.2.</span> <span class="nav-text">附加pass</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#前向渲染性能注意事项"><span class="nav-number">2.1.1.3.</span> <span class="nav-text">前向渲染性能注意事项</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#延迟渲染路径"><span class="nav-number">2.1.2.</span> <span class="nav-text">延迟渲染路径</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#延迟着色的需求"><span class="nav-number">2.1.2.1.</span> <span class="nav-text">延迟着色的需求</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#前向渲染性能注意事项-1"><span class="nav-number">2.1.2.2.</span> <span class="nav-text">前向渲染性能注意事项</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#实现细节"><span class="nav-number">2.1.2.3.</span> <span class="nav-text">实现细节</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#g-buffer-pass"><span class="nav-number">2.1.2.4.</span> <span class="nav-text">G-Buffer pass</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#光照pass"><span class="nav-number">2.1.2.5.</span> <span class="nav-text">光照pass</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#扩展内建渲染管线"><span class="nav-number">2.2.</span> <span class="nav-text">扩展内建渲染管线</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#shader基础模板"><span class="nav-number">2.3.</span> <span class="nav-text">Shader基础模板</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#前向渲染路径shader模板"><span class="nav-number">2.3.1.</span> <span class="nav-text">前向渲染路径Shader模板</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#延迟渲染路径shader模板"><span class="nav-number">2.3.2.</span> <span class="nav-text">延迟渲染路径Shader模板</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#gbuffer-shader-每个mesh执行一次"><span class="nav-number">2.3.2.1.</span> <span class="nav-text">GBuffer Shader
+（每个Mesh执行一次）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#light-shader-每个光源执行一次"><span class="nav-number">2.3.2.2.</span> <span class="nav-text">Light Shader
+(每个光源执行一次)</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#srp"><span class="nav-number">3.</span> <span class="nav-text">SRP</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#渲染管线实例和渲染管线资源"><span class="nav-number">3.1.</span> <span class="nav-text">渲染管线实例和渲染管线资源</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#scriptablerendercontext"><span class="nav-number">3.2.</span> <span class="nav-text">ScriptableRenderContext</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#入口点和回调"><span class="nav-number">3.3.</span> <span class="nav-text">入口点和回调</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安排和执行渲染命令"><span class="nav-number">3.4.</span> <span class="nav-text">安排和执行渲染命令</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#使用scriptablerendercontext-apis"><span class="nav-number">3.4.1.</span> <span class="nav-text">使用ScriptableRenderContext
+APIs</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#自定义渲染管线"><span class="nav-number">4.</span> <span class="nav-text">自定义渲染管线</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#基于srp创建自定渲染管线"><span class="nav-number">4.1.</span> <span class="nav-text">基于SRP创建自定渲染管线</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#创建一个项目并安装依赖包"><span class="nav-number">4.1.1.</span> <span class="nav-text">创建一个项目并安装依赖包</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建渲染管线资源和渲染管线实例"><span class="nav-number">4.2.</span> <span class="nav-text">创建渲染管线资源和渲染管线实例</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#创建基础的渲染管线资源和实例"><span class="nav-number">4.2.1.</span> <span class="nav-text">创建基础的渲染管线资源和实例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#创建可配置的渲染管线资源和实例"><span class="nav-number">4.2.2.</span> <span class="nav-text">创建可配置的渲染管线资源和实例</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建一个简单的渲染循环"><span class="nav-number">4.3.</span> <span class="nav-text">创建一个简单的渲染循环</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#准备你的项目"><span class="nav-number">4.3.1.</span> <span class="nav-text">准备你的项目</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#创建一个srp兼容shader"><span class="nav-number">4.3.2.</span> <span class="nav-text">创建一个SRP兼容shader</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#创建渲染对象"><span class="nav-number">4.3.3.</span> <span class="nav-text">创建渲染对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#创建自定义srp的基础结构"><span class="nav-number">4.3.4.</span> <span class="nav-text">创建自定义SRP的基础结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#创建渲染循环"><span class="nav-number">4.3.5.</span> <span class="nav-text">创建渲染循环</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#清理渲染目标"><span class="nav-number">4.3.5.1.</span> <span class="nav-text">清理渲染目标</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#剔除"><span class="nav-number">4.3.5.2.</span> <span class="nav-text">剔除</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#绘制"><span class="nav-number">4.3.5.3.</span> <span class="nav-text">绘制</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#urp"><span class="nav-number">5.</span> <span class="nav-text">URP</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#渲染管线概念"><span class="nav-number">5.1.</span> <span class="nav-text">渲染管线概念</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#urp资源"><span class="nav-number">5.1.1.</span> <span class="nav-text">URP资源</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#urp全局设置"><span class="nav-number">5.1.2.</span> <span class="nav-text">URP全局设置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#渲染器"><span class="nav-number">5.1.3.</span> <span class="nav-text">渲染器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#渲染器特性"><span class="nav-number">5.1.4.</span> <span class="nav-text">渲染器特性</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#灯光"><span class="nav-number">5.2.</span> <span class="nav-text">灯光</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#相机"><span class="nav-number">5.3.</span> <span class="nav-text">相机</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#后处理"><span class="nav-number">5.4.</span> <span class="nav-text">后处理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#着色器和材质"><span class="nav-number">5.5.</span> <span class="nav-text">着色器和材质</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#选择着色器"><span class="nav-number">5.5.1.</span> <span class="nav-text">选择着色器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#srp批处理器兼容"><span class="nav-number">5.5.2.</span> <span class="nav-text">SRP批处理器兼容</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#着色器剔除"><span class="nav-number">5.5.3.</span> <span class="nav-text">着色器剔除</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#urp-shaderlab-pass-标记"><span class="nav-number">5.5.4.</span> <span class="nav-text">URP ShaderLab Pass 标记</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#d图形特性"><span class="nav-number">5.6.</span> <span class="nav-text">2D图形特性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#d灯光实现细节"><span class="nav-number">5.6.1.</span> <span class="nav-text">2D灯光实现细节</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#前期计算排序层批处理"><span class="nav-number">5.6.1.1.</span> <span class="nav-text">前期：计算排序层批处理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#阶段-1绘制光渲染纹理"><span class="nav-number">5.6.1.2.</span> <span class="nav-text">阶段 1：绘制光渲染纹理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#第-2-阶段绘制渲染器"><span class="nav-number">5.6.1.3.</span> <span class="nav-text">第 2 阶段：绘制渲染器</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#d-pixel-perfect"><span class="nav-number">5.6.2.</span> <span class="nav-text">2D Pixel Perfect</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#hdrp"><span class="nav-number">6.</span> <span class="nav-text">HDRP</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#原文"><span class="nav-number">7.</span> <span class="nav-text">原文</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <img class="site-author-image" itemprop="image" alt="张卫"
+    src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">张卫</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">31</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/zw514159799" title="CSDN &amp;rarr; https:&#x2F;&#x2F;blog.csdn.net&#x2F;zw514159799" rel="noopener" target="_blank"><i class="fa fa-fw fa-csdn"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://github.com/Divad1111?tab=repositories" title="GitHub &amp;rarr; https:&#x2F;&#x2F;github.com&#x2F;Divad1111?tab&#x3D;repositories" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.cnblogs.com/qilezaitu" title="博客园 &amp;rarr; https:&#x2F;&#x2F;www.cnblogs.com&#x2F;qilezaitu" rel="noopener" target="_blank"><i class="fa fa-fw fa-cnblogs"></i>博客园</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://baidu.com/" title="https:&#x2F;&#x2F;baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://bing.com/" title="https:&#x2F;&#x2F;bing.com" rel="noopener" target="_blank">Bing</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2019 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">张卫</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-area-chart"></i>
+    </span>
+      <span class="post-meta-item-text">站点总字数：</span>
+    <span title="站点总字数">542k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">8:13</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.1
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.5.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

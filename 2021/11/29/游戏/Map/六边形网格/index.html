@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="这篇文章覆盖了制作六边形地图所涉及到相关的方法，通用公式和算法。为了文章更加优雅简洁，文中的实例都将使用伪代码进行描述。 几何性质 六边形是由六个边组成的。正六边形的每条边长度相同。我们这里假设所有的六边形都是正六边形。六边形的方向有两个： 1. 垂直列方向(六边形的任意两条平行边在垂直方向上)   水平行反向(六边形的任意两条平行边在水平方向上)   六边形有6个边和6个角。每个边被两个六边形共">
+<meta property="og:type" content="article">
+<meta property="og:title" content="六边形网格">
+<meta property="og:url" content="http://yoursite.com/2021/11/29/%E6%B8%B8%E6%88%8F/Map/%E5%85%AD%E8%BE%B9%E5%BD%A2%E7%BD%91%E6%A0%BC/index.html">
+<meta property="og:site_name" content="张卫的博客">
+<meta property="og:description" content="这篇文章覆盖了制作六边形地图所涉及到相关的方法，通用公式和算法。为了文章更加优雅简洁，文中的实例都将使用伪代码进行描述。 几何性质 六边形是由六个边组成的。正六边形的每条边长度相同。我们这里假设所有的六边形都是正六边形。六边形的方向有两个： 1. 垂直列方向(六边形的任意两条平行边在垂直方向上)   水平行反向(六边形的任意两条平行边在水平方向上)   六边形有6个边和6个角。每个边被两个六边形共">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://yoursite.com/images/map/hex_ver_ss.png">
+<meta property="og:image" content="http://yoursite.com/images/map/offset_coord.png">
+<meta property="og:image" content="http://yoursite.com/images/map/cube_coord.gif">
+<meta property="og:image" content="http://yoursite.com/images/map/cube_coord.png">
+<meta property="og:image" content="http://yoursite.com/images/map/doubled_coord.png">
+<meta property="og:image" content="http://yoursite.com/images/map/coord.png">
+<meta property="og:image" content="http://yoursite.com/images/map/distance.png">
+<meta property="og:image" content="http://yoursite.com/images/map/range.png">
+<meta property="og:image" content="http://yoursite.com/images/map/intersecting.png">
+<meta property="og:image" content="http://yoursite.com/images/map/obstacles.png">
+<meta property="article:published_time" content="2021-11-29T04:00:02.000Z">
+<meta property="article:modified_time" content="2025-04-26T11:06:24.134Z">
+<meta property="article:author" content="张卫">
+<meta property="article:tag" content="Map">
+<meta property="article:tag" content="翻译">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yoursite.com/images/map/hex_ver_ss.png">
+
+<link rel="canonical" href="http://yoursite.com/2021/11/29/%E6%B8%B8%E6%88%8F/Map/%E5%85%AD%E8%BE%B9%E5%BD%A2%E7%BD%91%E6%A0%BC/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>六边形网格 | 张卫的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">张卫的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">Done is better than perfect</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/11/29/%E6%B8%B8%E6%88%8F/Map/%E5%85%AD%E8%BE%B9%E5%BD%A2%E7%BD%91%E6%A0%BC/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          六边形网格
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-11-29 12:00:02" itemprop="dateCreated datePublished" datetime="2021-11-29T12:00:02+08:00">2021-11-29</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2025-04-26 19:06:24" itemprop="dateModified" datetime="2025-04-26T19:06:24+08:00">2025-04-26</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Map/" itemprop="url" rel="index">
+                    <span itemprop="name">Map</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>这篇文章覆盖了制作六边形地图所涉及到相关的方法，通用公式和算法。为了文章更加优雅简洁，文中的实例都将使用伪代码进行描述。</p>
+<h1 id="几何性质">几何性质</h1>
+<p>六边形是由六个边组成的。正六边形的每条边长度相同。我们这里假设所有的六边形都是正六边形。六边形的方向有两个：
+1. 垂直列方向(六边形的任意两条平行边在垂直方向上) <img
+src="/images/map/hex_ver.png" alt="垂直方向" /></p>
+<ol start="2" type="1">
+<li>水平行反向(六边形的任意两条平行边在水平方向上) <img
+src="/images/map/hex_hor.png" alt="水平方向" /></li>
+</ol>
+<p>六边形有6个边和6个角。每个边被两个六边形共享。每个角被三个六边形共享。更多关于中心点(centers),
+边(sides), 和 角(corners)可以参见<a
+href="http://www-cs-students.stanford.edu/~amitp/game-programming/grids/">这篇文章（四边形，六边性和三角形）</a>。</p>
+<a id="more"></a>
+<h2 id="角度">角度</h2>
+<p>一个正六边的内角是<span
+class="math inline">\(120^°\)</span>。有六个“楔形”，每个都是一个内角为<span
+class="math inline">\(60^°\)</span>的等边三角形。每个角到中心的距离相等定义为它的大小。
+使用以下代码去绘制一个六边形： <figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">pointy_hex_corner</span>(<span class="params">center, size, i</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">angle_deg</span> = 60 * <span class="title">i</span> //垂直方向</span></span><br><span class="line"><span class="function">    //<span class="title">var</span> <span class="title">angle_deg</span> = 60 * <span class="title">i</span> - 30°//水平方向</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">angle_rad</span> = <span class="title">PI</span> / 180 * <span class="title">angle_deg</span></span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">Point</span>(<span class="params">center.x + size * cos(angle_rad</span>),</span></span><br><span class="line"><span class="function">                 <span class="title">center</span>.<span class="title">y</span> + <span class="title">size</span> * <span class="title">sin</span>(<span class="params">angle_rad</span>))</span></span><br></pre></td></tr></table></figure> 通过pointy_hex_corner(..., 0)
+到pointy_hex_corner(...,
+5)分别计算出六边形的6个顶点。然后绘制线连接各个顶点，则形成了六边形的外框了。</p>
+<p>两个不同方向的六边形的角度是不一样的。 1. 垂直方向的角度是：<span
+class="math inline">\(0^°\)</span>，<span
+class="math inline">\(60^°\)</span>，<span
+class="math inline">\(120^°\)</span>，<span
+class="math inline">\(180^°\)</span>，<span
+class="math inline">\(240^°\)</span>，<span
+class="math inline">\(300^°\)</span> <img
+src="/images/map/hex_ver_angle.png" alt="垂直方向" /></p>
+<ol start="2" type="1">
+<li>水平方向的角度是：<span class="math inline">\(30^°\)</span>，<span
+class="math inline">\(90^°\)</span>，<span
+class="math inline">\(150^°\)</span>，<span
+class="math inline">\(210^°\)</span>，<span
+class="math inline">\(270^°\)</span>，<span
+class="math inline">\(330^°\)</span> <img
+src="/images/map/hex_hor_angle.png" alt="水平方向" /></li>
+</ol>
+<p>说明：图中的y轴向下，角度的正方向是顺时针的。如果你y轴是向上的，角度的正方向是逆时针的，则需要做相应的调整。</p>
+<p>在数学上，六边形的外接圆半径就是从中心到顶点的距离，我们称之为六边形的大小；内接圆半径是从中心点到边的距离。“最大直径”是外接圆半径的两倍，“最小直径”是内接圆半径的两倍。</p>
+<h2 id="大小size和间距spacing">大小(size)和间距(Spacing)</h2>
+<p>现在我们将多个六边形放在一起。其中size被定义为从中心点到任意角的距离。
+1. 在垂直方向上(平直边平行于水平轴)，六边形的宽w = 2 * size, 高h = <span
+class="math inline">\(2 * \frac{\sqrt{3}}{2} * size\)</span> = <span
+class="math inline">\(\sqrt{3} * size\)</span>(其中<span
+class="math inline">\(\sqrt{3}\)</span>是根据<span
+class="math inline">\(sin(60^°)\)</span>而来)。两个相邻六边形中心点水平之间的距离被定义为水平间距（horizontal
+spacing）= <span class="math inline">\(w * \frac{3}{4}\)</span>,
+两中心点垂直方向的间距被定义为垂直间距（vertical spacing）= h。如下图：
+<img src="/images/map/hex_ver_ss.png" alt="垂直方向" /></p>
+<ol start="2" type="1">
+<li>在水平方向上(平直边平行于垂直轴)，六边形的宽w = <span
+class="math inline">\(\sqrt{3} * size\)</span>,高h = 2 *
+size。两个相邻六边形中心点水平之间的距离被定义为水平间距（horizontal
+spacing）= w, 两中心点垂直方向的间距被定义为垂直间距（vertical
+spacing）= <span class="math inline">\(h * \frac{3}{4}\)</span> <img
+src="/images/map/hex_hor_ss.png" alt="水平方向" /></li>
+</ol>
+<p>一些游戏使用像素风格可能导像素数不能匹配到真实的正多边形上。在这个章节描述角度和间距可能不能够匹配到你的六边形大小。这篇文章的其余部分描述了六边形在六边形网格上的算法，即使你的六边形被拉伸或收缩了一点，我也会在<a
+href="https://www.redblobgames.com/grids/hexagons/implementation.html">这篇文章</a>说明如何处理拉伸。</p>
+<h1 id="坐标系统">坐标系统</h1>
+<p>现在我们将六边形组装成一个网格。
+对于方形网格，方法就比较明显了，可以将六边形逐行拼接即可。
+对于六边形来说，有多种方法。我喜欢用于算法的立方体坐标（Cube
+coordinates）和轴向坐标（Axial
+coordinates）或用于存储的双倍坐标（Doubled coordinates）。</p>
+<h2 id="偏移坐标offset-coordinates">偏移坐标（Offset coordinates）</h2>
+<p>偏移坐标是将正六变形在每一列或行进行偏移组成的一个网格，列被命名为col(q),
+行被命名为row(r)。我们可以选择偏移奇或偶（列/行），所以在水平或垂直方向上又有两种变体（奇偏移或偶偏移）。如下图：
+<img src="/images/map/offset_coord.png" alt="偏移坐标" /></p>
+<h2 id="立方体坐标cube-coordinates">立方体坐标（Cube coordinates）</h2>
+<p>另一种观察六边形网格的方式是六边形定义有三个轴，不像偏移坐标这种只有两个轴的方形网格，立方体坐标多了一些对称美。
+让我们取一个立方体网格并在x + y + z = 0的位置切出一个对角平面。如下图：
+<img src="/images/map/cube_coord.gif" alt="立方体坐标" />
+这虽然是个奇怪的想法，但它可以帮助我们使用六边形网格算法： 1.
+在3D笛卡尔积坐标系中，有一些标准的向量操作：加或减，乘或除等运算。我们能在六边形网格中使用这些操作。偏移坐标不支持这些操作。
+2.
+在3D笛卡尔积坐标系中，有一些现存的算法，比如：距离，旋转，反射，绘线，转换坐标等。这些算法也是适用于六边形网格。</p>
+<p><img src="/images/map/cube_coord.png" alt="立方体坐标" />
+立方体坐标是六边形网格坐标系的合理选择。强制约束q + r + s =
+0，所以算法必须保证这一约束。该约束还确保每个六边形都有一个规范坐标（q+r+s=0）。</p>
+<h2 id="轴向坐标axial-coordinates">轴向坐标（Axial coordinates）</h2>
+<p>轴向坐标和立方体坐标是相同的，轴向坐标中我们不用存储s轴坐标的值，因为我们限制q+r+s=0,
+当我们需要s时，可以通过s=-q-r得到。
+轴向/立方体坐标，允许在六边形网格中使用加，减，乘和除。偏移坐标不允许这样做，这使得使用轴向/立方体坐标在算法使用上更简单。</p>
+<h2 id="双倍坐标doubled-coordinates">双倍坐标（Doubled
+coordinates）</h2>
+<p>虽然我推荐使用轴向坐标（Axial coordinates）和立方体坐标（Cube
+coordinates）,如果你还是执意于偏移坐标（Offset
+coordinates），那么可以考虑的它的另一种形式即双倍坐标（Doubled
+coordinates）。它能确保大部分的算法更加容易实现。双倍坐标不是交替，而是水平或垂直步长是偏移坐标的两倍。它有个限制即：(col+row)%2==0。在水平（尖顶在上）布局中，每个六边形将列增加2；在垂直（平顶在上）布局中，每个六边形将行增加2。这允许介于两者之间的六边形使用中间值。如图：
+<img src="/images/map/doubled_coord.png" alt="双倍坐标" /></p>
+<h2 id="推荐">推荐</h2>
+<p>推荐什么？ <img src="/images/map/coord.png" alt="双倍坐标" />
+我推荐：如果你仅打算使用没有旋转的矩形地图，考虑使用双倍坐标（Doubled
+coordinates）或偏移坐标（Offset
+coordinates）。对于有旋转或非矩形形状的地图使用轴向坐标（Axial
+coordinates）或立方体坐标（Cube
+coordinates）。对于立方体坐标你可以选择存储s（立方体坐标）或在需要时通过-q-r计算得到（轴向坐标）。</p>
+<h1 id="坐标转换">坐标转换</h1>
+<p>您可能会在项目中使用轴向或偏移坐标，但许多算法更容易以轴向/立方体坐标表示。
+因此，您需要能够来回转换。</p>
+<h2 id="轴向坐标">轴向坐标</h2>
+<p>轴向和立方体坐标本质上是相同的。在立方体坐标统中，我们存储第三个轴，s。在轴向坐标统中，我们不存储它，但在我们需要时不得不通过，s=-q-r进行计算。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">cube_to_axial</span>(<span class="params">cube</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">q</span> = <span class="title">cube</span>.<span class="title">q</span></span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">r</span> = <span class="title">cube</span>.<span class="title">r</span></span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">Hex</span>(<span class="params">q,r</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">axial_to_cube</span>(<span class="params">hex</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">q</span> = <span class="title">hex</span>.<span class="title">q</span></span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">r</span> = <span class="title">hex</span>.<span class="title">r</span></span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">s</span> = -<span class="title">q</span>-<span class="title">r</span></span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">Cube</span>(<span class="params">q, r, s</span>)</span></span><br></pre></td></tr></table></figure>
+<h2 id="偏移坐标">偏移坐标</h2>
+<p>偏移坐标转换，首先需要确定使用的是<em>-r（尖顶在上）还是</em>-q（平顶在上）。这两种坐标系的转换是不同的：
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// axial from/to oddr</span></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">axial_to_oddr</span>(<span class="params">hex</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">col</span> = <span class="title">hex</span>.<span class="title">q</span> + (<span class="params">hex.r - (hex.r &amp; <span class="number">1</span></span>)) / 2</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">row</span> = <span class="title">hex</span>.<span class="title">r</span></span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">OffsetCoord</span>(<span class="params">col, row</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">oddr_to_axial</span>(<span class="params">hex</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">q</span> = <span class="title">hex</span>.<span class="title">col</span> - (<span class="params">hex.row - (hex.row &amp; <span class="number">1</span></span>)) / 2</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">r</span> = <span class="title">hex</span>.<span class="title">row</span></span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">Hex</span>(<span class="params">q,r</span>)</span></span><br><span class="line"><span class="function">// <span class="title">axial</span> <span class="title">from</span>/<span class="title">to</span> <span class="title">evenr</span></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">axial_to_evenr</span>(<span class="params">hex</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">col</span> = <span class="title">hex</span>.<span class="title">q</span> + (<span class="params">hex.r - (hex.r &amp; <span class="number">1</span></span>)) / 2</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">row</span> = <span class="title">hex</span>.<span class="title">r</span></span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">OffsetCoord</span>(<span class="params">col, row</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">evenr_to_axial</span>(<span class="params">hex</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">q</span> = <span class="title">hex</span>.<span class="title">col</span> - (<span class="params">hex.row - (hex.row &amp; <span class="number">1</span></span>)) / 2</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">r</span> = <span class="title">hex</span>.<span class="title">row</span></span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">Hex</span>(<span class="params">q,r</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">// <span class="title">axial</span> <span class="title">from</span>/<span class="title">to</span> <span class="title">oddq</span></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">axial_to_oddq</span>(<span class="params">hex</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">col</span> = <span class="title">hex</span>.<span class="title">q</span></span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">row</span> = <span class="title">hex</span>.<span class="title">r</span> + (<span class="params">hex.q - (hex.q&amp;<span class="number">1</span></span>)) / 2</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">OffsetCoord</span>(<span class="params">col, row</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">oddq_to_axial</span>(<span class="params">hex</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">q</span> = <span class="title">hex</span>.<span class="title">col</span></span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">r</span> = <span class="title">hex</span>.<span class="title">row</span> - (<span class="params">hex.col - (hex.col&amp;<span class="number">1</span></span>)) / 2</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">Hex</span>(<span class="params">q, r</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">// <span class="title">axial</span> <span class="title">from</span>/<span class="title">to</span> <span class="title">evenq</span></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">axial_to_evenq</span>(<span class="params">hex</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">col</span> = <span class="title">hex</span>.<span class="title">q</span></span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">row</span> = <span class="title">hex</span>.<span class="title">r</span> + (<span class="params">hex.q + (hex.q&amp;<span class="number">1</span></span>)) / 2</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">OffsetCoord</span>(<span class="params">col, row</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">evenq_to_axial</span>(<span class="params">hex</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">q</span> = <span class="title">hex</span>.<span class="title">col</span></span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">r</span> = <span class="title">hex</span>.<span class="title">row</span> - (<span class="params">hex.col + (hex.col&amp;<span class="number">1</span></span>)) / 2</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">Hex</span>(<span class="params">q, r</span>)</span></span><br></pre></td></tr></table></figure></p>
+<p>上述代码中使用了位运算&amp;对2进行求模运算</p>
+<h2 id="双倍坐标">双倍坐标</h2>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">doubleheight_to_axial</span>(<span class="params">hex</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">q</span> = <span class="title">hex</span>.<span class="title">col</span></span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">r</span> = (<span class="params">hex.row - hex.col</span>) / 2</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">Hex</span>(<span class="params">q, r</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">axial_to_doubleheight</span>(<span class="params">hex</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">col</span> = <span class="title">hex</span>.<span class="title">q</span></span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">row</span> = 2 * <span class="title">hex</span>.<span class="title">r</span> + <span class="title">hex</span>.<span class="title">q</span></span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">DoubledCoord</span>(<span class="params">col, row</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">doublewidth_to_axial</span>(<span class="params">hex</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">q</span> = (<span class="params">hex.col - hex.row</span>) / 2</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">r</span> = <span class="title">hex</span>.<span class="title">row</span></span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">Hex</span>(<span class="params">q, r</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">axial_to_doublewidth</span>(<span class="params">hex</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">col</span> = 2 * <span class="title">hex</span>.<span class="title">q</span> + <span class="title">hex</span>.<span class="title">r</span></span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">row</span> = <span class="title">hex</span>.<span class="title">r</span></span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">DoubledCoord</span>(<span class="params">col, row</span>)</span></span><br></pre></td></tr></table></figure>
+<p>如果你使用的是立方体坐标，使用立方体坐标Cube（q, r,
+-q-r）代替轴向坐标Hex(q, r)。</p>
+<h1 id="相邻六边形neighbors">相邻六边形（Neighbors）</h1>
+<p>给定一个六边形，哪6个六边形与它相邻？
+如您所料，立方体坐标的答案是最简单的，轴向坐标仍然非常简单，而偏移坐标则稍微复杂一些。我们可能还想计算6个“对角线”六边形。</p>
+<h2 id="立方体坐标">立方体坐标</h2>
+<p>在六边形坐标中移动一个格子涉及改变立方体坐标中3个分量中的其中一个+1且另一个-1（必须保证和为0）。立方体坐标中3个轴都有可能+1，剩下的2个轴可能-1。在相邻的6个六边形中，每个相当于六边形的6个方向。最简单和最快速的方法是预先计算存储它们在一个表中：
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> cube_direction_vectors = [</span><br><span class="line">    Cube(+<span class="number">1</span>, <span class="number">0</span>, <span class="number">-1</span>), Cube(+<span class="number">1</span>, <span class="number">-1</span>, <span class="number">0</span>), Cube(<span class="number">0</span>, <span class="number">-1</span>, +<span class="number">1</span>), </span><br><span class="line">    Cube(<span class="number">-1</span>, <span class="number">0</span>, +<span class="number">1</span>), Cube(<span class="number">-1</span>, +<span class="number">1</span>, <span class="number">0</span>), Cube(<span class="number">0</span>, +<span class="number">1</span>, <span class="number">-1</span>), </span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">cube_direction</span>(<span class="params">direction</span>):</span></span><br><span class="line">    return cube_direction_vectors[direction]</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">cube_add</span>(<span class="params">hex, vec</span>):</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">Cube</span>(<span class="params">hex.q + vec.q, hex.r + vec.q, hex.s + vec.s</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">cube_neighbor</span>(<span class="params">cube, direction</span>):</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">cube_add</span>(<span class="params">cube, cube_direction(direction</span>))</span></span><br></pre></td></tr></table></figure>
+使用立方体坐标系统，我们能存储不同两个不同的坐标值为一个“向量”，并且这些坐标可以相加得到另外一个坐标。这就是cube_add函数所做的功能。轴坐标和双倍坐标也支持此运算，但偏移坐标不支持。</p>
+<h2 id="轴坐标">轴坐标</h2>
+<p>轴坐标除了不存储第三个坐标以外，其他的和立方体坐标是相同的。代码除了不写第三个轴外，其他的都和立方体坐标相同：
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> cube_direction_vectors = [</span><br><span class="line">    Cube(+<span class="number">1</span>, <span class="number">0</span>), Cube(+<span class="number">1</span>, <span class="number">-1</span>), Cube(<span class="number">0</span>, <span class="number">-1</span>), </span><br><span class="line">    Cube(<span class="number">-1</span>, <span class="number">0</span>), Cube(<span class="number">-1</span>, +<span class="number">1</span>), Cube(<span class="number">0</span>, +<span class="number">1</span>), </span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">cube_direction</span>(<span class="params">direction</span>):</span></span><br><span class="line">    return cube_direction_vectors[direction]</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">cube_add</span>(<span class="params">hex, vec</span>):</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">Cube</span>(<span class="params">hex.q + vec.q, hex.r + vec.q</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">cube_neighbor</span>(<span class="params">cube, direction</span>):</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">cube_add</span>(<span class="params">cube, cube_direction(direction</span>))</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="偏移坐标-1">偏移坐标</h2>
+<p>与立方体和轴坐标一样，我们将构建一个需要添加到 col 和 row
+的数字的表格。然而<strong>偏移坐标系不能够安全的进行加减</strong>。例如，从
+(0, 0) 向东南移动会将我们带到 (0, +1)，因此我们可以将 (0, +1)
+放入表中以向东南移动。 但是从 (0, +1) 向东南移动会将我们带到 (+1,
++2)，因此我们需要将 (+1, +1)
+放入该表中。需要添加的数量依赖我们在表格中的位置。
+因此偏移坐标对于奇和偶列/行是有区别的，我们需要分两个列表来存储邻接六边形列表。
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// odd-r</span></span><br><span class="line"><span class="keyword">var</span> oddr_direction_differences = [</span><br><span class="line">    <span class="comment">// even rows </span></span><br><span class="line">    [[+<span class="number">1</span>,  <span class="number">0</span>], [ <span class="number">0</span>, <span class="number">-1</span>], [<span class="number">-1</span>, <span class="number">-1</span>], </span><br><span class="line">     [<span class="number">-1</span>,  <span class="number">0</span>], [<span class="number">-1</span>, +<span class="number">1</span>], [ <span class="number">0</span>, +<span class="number">1</span>]],</span><br><span class="line">    <span class="comment">// odd rows </span></span><br><span class="line">    [[+<span class="number">1</span>,  <span class="number">0</span>], [+<span class="number">1</span>, <span class="number">-1</span>], [ <span class="number">0</span>, <span class="number">-1</span>], </span><br><span class="line">     [<span class="number">-1</span>,  <span class="number">0</span>], [ <span class="number">0</span>, +<span class="number">1</span>], [+<span class="number">1</span>, +<span class="number">1</span>]],</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">oddr_offset_neighbor</span>(<span class="params">hex, direction</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">parity</span> = <span class="title">hex</span>.<span class="title">row</span> &amp; 1</span></span><br><span class="line">    var diff = oddr_direction_differences[parity][direction]</span><br><span class="line">    <span class="keyword">return</span> OffsetCoord(hex.col + diff[<span class="number">0</span>], hex.row + diff[<span class="number">1</span>])</span><br><span class="line"></span><br><span class="line"><span class="comment">// even-r</span></span><br><span class="line"><span class="keyword">var</span> evenr_direction_differences = [</span><br><span class="line">    <span class="comment">// even rows </span></span><br><span class="line">    [[+<span class="number">1</span>,  <span class="number">0</span>], [+<span class="number">1</span>, <span class="number">-1</span>], [ <span class="number">0</span>, <span class="number">-1</span>], </span><br><span class="line">     [<span class="number">-1</span>,  <span class="number">0</span>], [ <span class="number">0</span>, +<span class="number">1</span>], [+<span class="number">1</span>, +<span class="number">1</span>]],</span><br><span class="line">    <span class="comment">// odd rows </span></span><br><span class="line">    [[+<span class="number">1</span>,  <span class="number">0</span>], [ <span class="number">0</span>, <span class="number">-1</span>], [<span class="number">-1</span>, <span class="number">-1</span>], </span><br><span class="line">     [<span class="number">-1</span>,  <span class="number">0</span>], [<span class="number">-1</span>, +<span class="number">1</span>], [ <span class="number">0</span>, +<span class="number">1</span>]],</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">evenr_offset_neighbor</span>(<span class="params">hex, direction</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">parity</span> = <span class="title">hex</span>.<span class="title">row</span> &amp; 1</span></span><br><span class="line">    var diff = evenr_direction_differences[parity][direction]</span><br><span class="line">    <span class="keyword">return</span> OffsetCoord(hex.col + diff[<span class="number">0</span>], hex.row + diff[<span class="number">1</span>])</span><br><span class="line"></span><br><span class="line"><span class="comment">// odd-q</span></span><br><span class="line"><span class="keyword">var</span> oddq_direction_differences = [</span><br><span class="line">    <span class="comment">// even cols </span></span><br><span class="line">    [[+<span class="number">1</span>,  <span class="number">0</span>], [+<span class="number">1</span>, <span class="number">-1</span>], [ <span class="number">0</span>, <span class="number">-1</span>], </span><br><span class="line">     [<span class="number">-1</span>, <span class="number">-1</span>], [<span class="number">-1</span>,  <span class="number">0</span>], [ <span class="number">0</span>, +<span class="number">1</span>]],</span><br><span class="line">    <span class="comment">// odd cols </span></span><br><span class="line">    [[+<span class="number">1</span>, +<span class="number">1</span>], [+<span class="number">1</span>,  <span class="number">0</span>], [ <span class="number">0</span>, <span class="number">-1</span>], </span><br><span class="line">     [<span class="number">-1</span>,  <span class="number">0</span>], [<span class="number">-1</span>, +<span class="number">1</span>], [ <span class="number">0</span>, +<span class="number">1</span>]],</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">oddq_offset_neighbor</span>(<span class="params">hex, direction</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">parity</span> = <span class="title">hex</span>.<span class="title">col</span> &amp; 1</span></span><br><span class="line">    var diff = oddq_direction_differences[parity][direction]</span><br><span class="line">    <span class="keyword">return</span> OffsetCoord(hex.col + diff[<span class="number">0</span>], hex.row + diff[<span class="number">1</span>])</span><br><span class="line"></span><br><span class="line"><span class="comment">// even-q</span></span><br><span class="line"><span class="keyword">var</span> evenq_direction_differences = [</span><br><span class="line">    <span class="comment">// even cols </span></span><br><span class="line">    [[+<span class="number">1</span>, +<span class="number">1</span>], [+<span class="number">1</span>,  <span class="number">0</span>], [ <span class="number">0</span>, <span class="number">-1</span>], </span><br><span class="line">     [<span class="number">-1</span>,  <span class="number">0</span>], [<span class="number">-1</span>, +<span class="number">1</span>], [ <span class="number">0</span>, +<span class="number">1</span>]],</span><br><span class="line">    <span class="comment">// odd cols </span></span><br><span class="line">    [[+<span class="number">1</span>,  <span class="number">0</span>], [+<span class="number">1</span>, <span class="number">-1</span>], [ <span class="number">0</span>, <span class="number">-1</span>], </span><br><span class="line">     [<span class="number">-1</span>, <span class="number">-1</span>], [<span class="number">-1</span>,  <span class="number">0</span>], [ <span class="number">0</span>, +<span class="number">1</span>]],</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">evenq_offset_neighbor</span>(<span class="params">hex, direction</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">parity</span> = <span class="title">hex</span>.<span class="title">col</span> &amp; 1</span></span><br><span class="line">    var diff = evenq_direction_differences[parity][direction]</span><br><span class="line">    <span class="keyword">return</span> OffsetCoord(hex.col + diff[<span class="number">0</span>], hex.row + diff[<span class="number">1</span>])</span><br></pre></td></tr></table></figure></p>
+<h2 id="双倍坐标-1">双倍坐标</h2>
+<p>不像偏移坐标，双倍坐标的邻接六边形不依赖于我们使用的是列/行。它们在任何地方都是相同的，与轴向/立方体坐标。同样与偏移坐标不同，我们可以安全地减去和添加双倍坐标，这使得它们比偏移坐标更容易使用。
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// double width</span></span><br><span class="line"><span class="keyword">var</span> doublewidth_direction_vectors = [</span><br><span class="line">    DoubledCoord(+<span class="number">2</span>,  <span class="number">0</span>), DoubledCoord(+<span class="number">1</span>, <span class="number">-1</span>), </span><br><span class="line">    DoubledCoord(<span class="number">-1</span>, <span class="number">-1</span>), DoubledCoord(<span class="number">-2</span>,  <span class="number">0</span>), </span><br><span class="line">    DoubledCoord(<span class="number">-1</span>, +<span class="number">1</span>), DoubledCoord(+<span class="number">1</span>, +<span class="number">1</span>), </span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">doublewidth_add</span>(<span class="params">hex, diff</span>):</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">DoubleCoord</span>(<span class="params">hex.col + diff.col, hex.row + diff.row</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">doublewidth_neighbor</span>(<span class="params">hex, direction</span>):</span></span><br><span class="line">    var vec = doublewidth_direction_vectors[direction]</span><br><span class="line">    <span class="keyword">return</span> doublewidth_add(hex, vec)</span><br><span class="line"></span><br><span class="line"><span class="comment">// double height </span></span><br><span class="line"><span class="keyword">var</span> doubleheight_direction_vectors = [</span><br><span class="line">    DoubledCoord(+<span class="number">1</span>, +<span class="number">1</span>), DoubledCoord(+<span class="number">1</span>, <span class="number">-1</span>), </span><br><span class="line">    DoubledCoord( <span class="number">0</span>, <span class="number">-2</span>), DoubledCoord(<span class="number">-1</span>, <span class="number">-1</span>), </span><br><span class="line">    DoubledCoord(<span class="number">-1</span>, +<span class="number">1</span>), DoubledCoord( <span class="number">0</span>, +<span class="number">2</span>), </span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">doubleheight_add</span>(<span class="params">hex, diff</span>):</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">DoubleCoord</span>(<span class="params">hex.col + diff.col, hex.row + diff.row</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">doubleheight_neighbor</span>(<span class="params">hex, direction</span>):</span></span><br><span class="line">    var vec = doubleheight_direction_vectors[direction]</span><br><span class="line">    <span class="keyword">return</span> doubleheight_add(hex, vec)</span><br></pre></td></tr></table></figure></p>
+<h2 id="对角线">对角线</h2>
+<p>移动到六边形坐标中的“对角线”空间会使 3 个立方体坐标中的一个改变
+±2，另外两个改变 ∓1（总和必须保持为 0）。 <figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> cube_diagonal_vectors = [</span><br><span class="line">    Cube(+<span class="number">2</span>, <span class="number">-1</span>, <span class="number">-1</span>), Cube(+<span class="number">1</span>, <span class="number">-2</span>, +<span class="number">1</span>), Cube(<span class="number">-1</span>, <span class="number">-1</span>, +<span class="number">2</span>), </span><br><span class="line">    Cube(<span class="number">-2</span>, +<span class="number">1</span>, +<span class="number">1</span>), Cube(<span class="number">-1</span>, +<span class="number">2</span>, <span class="number">-1</span>), Cube(+<span class="number">1</span>, +<span class="number">1</span>, <span class="number">-2</span>), </span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">cube_diagonal_neighbor</span>(<span class="params">cube, direction</span>):</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">cube_add</span>(<span class="params">cube, cube_diagonal_vectors[direction]</span>)</span></span><br></pre></td></tr></table></figure></p>
+<h1 id="距离">距离</h1>
+<h2 id="立方体坐标-1">立方体坐标</h2>
+<p>由于六边形立方体坐标是基于3D立方体坐标的，所以我们在六边形网格中也能适用于3D中的距离计算。每个六边形网格相当于3D空间中的一个立方体。在六边形网格中，邻接六边形的距离是1但在立方体网格中其距离是2。对于在立方体网格中步长为2的，在六边形形网格中步长则为1。在3D立方体网格中，经典的曼哈顿距离是abs(dx)+abs(dy)+abs(dz)，那么在六边形网格中的距离则是它的一半。
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">cube_subtract</span>(<span class="params">a, b</span>):</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">Cube</span>(<span class="params">a.q - b.q, a.r - b.r, a.s - b.s</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">cube_distance</span>(<span class="params">a, b</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">vec</span> = <span class="title">cube_subtract</span>(<span class="params">a, b</span>)</span></span><br><span class="line"><span class="function">    <span class="title">return</span> (<span class="params">abs(vec.q</span>) + <span class="title">abs</span>(<span class="params">vec.r</span>) + <span class="title">abs</span>(<span class="params">vec.s</span>)) / 2</span></span><br><span class="line"><span class="function">    // <span class="title">or</span>: (<span class="params">abs(a.q - b.q</span>) + <span class="title">abs</span>(<span class="params">a.r - b.r</span>) + <span class="title">abs</span>(<span class="params">a.s - b.s</span>)) / 2</span></span><br></pre></td></tr></table></figure>
+我们注意三个坐标中的一个必须是其他两个坐标的总和，然后选择这个作为距离。这也是一种计算距离等效的方法，您可能更喜欢上面的“除以二”形式，或者这里的“最大”形式，但它们给出的结果相同：
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">cube_subtract</span>(<span class="params">a, b</span>):</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">Cube</span>(<span class="params">a.q - b.q, a.r - b.r, a.s - b.s</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">cube_distance</span>(<span class="params">a, b</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">vec</span> = <span class="title">cube_subtract</span>(<span class="params">a, b</span>)</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">max</span>(<span class="params">abs(vec.q</span>), <span class="title">abs</span>(<span class="params">vec.r</span>), <span class="title">abs</span>(<span class="params">vec.s</span>))</span></span><br><span class="line"><span class="function">    // <span class="title">or</span>: <span class="title">max</span>(<span class="params">abs(a.q - b.q</span>), <span class="title">abs</span>(<span class="params">a.r - b.r</span>), <span class="title">abs</span>(<span class="params">a.s - b.s</span>))</span></span><br></pre></td></tr></table></figure></p>
+<figure>
+<img src="/images/map/distance.png" alt="距离" />
+<figcaption aria-hidden="true">距离</figcaption>
+</figure>
+<h2 id="轴坐标-1">轴坐标</h2>
+<p>在轴的系统中，第三个轴是隐式的。我们总是能够转换一个轴坐标到立方体坐标去计算距离：
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">axial_distance</span>(<span class="params">a, b</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">ac</span> = <span class="title">axial_to_cube</span>(<span class="params">a</span>)</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">bc</span> = <span class="title">axial_to_cube</span>(<span class="params">b</span>)</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">cube_distance</span>(<span class="params">ac, bc</span>)</span></span><br></pre></td></tr></table></figure> 一旦我们内联这些函数，结果将如下： <figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">axial_distance</span>(<span class="params">a, b</span>):</span></span><br><span class="line"><span class="function">    <span class="title">return</span> (<span class="params">abs(a.q - b.q</span>) </span></span><br><span class="line"><span class="function">          + <span class="title">abs</span>(<span class="params">a.q + a.r - b.q - b.r</span>)</span></span><br><span class="line"><span class="function">          + <span class="title">abs</span>(<span class="params">a.r - b.r</span>)) / 2</span></span><br></pre></td></tr></table></figure>
+上面的形式也能被写成： <figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">axial_subtract</span>(<span class="params">a, b</span>):</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">Hex</span>(<span class="params">a.q - b.q, a.r - b.r</span>)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">axial_distance</span>(<span class="params">a, b</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">vec</span> = <span class="title">axial_subtract</span>(<span class="params">a, b</span>)</span></span><br><span class="line"><span class="function">    <span class="title">return</span> (<span class="params">abs(vec.q</span>)</span></span><br><span class="line"><span class="function">          + <span class="title">abs</span>(<span class="params">vec.q + vec.r</span>)</span></span><br><span class="line"><span class="function">          + <span class="title">abs</span>(<span class="params">vec.r</span>)) / 2</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="偏移坐标-2">偏移坐标</h2>
+<p>与轴坐标一样，我们将转换偏移坐标到轴/立方体坐标，然后使用轴/立方坐标的计算方法。
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">offset_distance</span>(<span class="params">a, b</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">ac</span> = <span class="title">offset_to_axial</span>(<span class="params">a</span>)</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">bc</span> = <span class="title">offset_to_axial</span>(<span class="params">b</span>)</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">axial_distance</span>(<span class="params">ac, bc</span>)</span></span><br></pre></td></tr></table></figure>
+我们将使用相同的模式对于大多数的算法：转换偏移到轴/立方体坐标，然后应用的轴/立方体坐标的算法，并转换任意的轴/立方体坐标的结果回偏移坐标。</p>
+<h2 id="双倍坐标-2">双倍坐标</h2>
+<p>虽然转换双倍坐标到轴/立方体坐标也是可行的，但是在<a
+href="http://ondras.github.io/rot.js/manual/#hex/indexing">rot.js手册</a>中，有直接的距离计算公式：
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">doublewidth_distance</span>(<span class="params">a, b</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">dcol</span> = <span class="title">abs</span>(<span class="params">a.col - b.col</span>)</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">drow</span> = <span class="title">abs</span>(<span class="params">a.row - b.row</span>)</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">drow</span> + <span class="title">max</span>(<span class="params"><span class="number">0</span>, (dcol-drow</span>)/2)</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">doubleheight_distance</span>(<span class="params">a, b</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">dcol</span> = <span class="title">abs</span>(<span class="params">a.col - b.col</span>)</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">drow</span> = <span class="title">abs</span>(<span class="params">a.row - b.row</span>)</span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">dcol</span> + <span class="title">max</span>(<span class="params"><span class="number">0</span>, (drow−dcol</span>)/2)</span></span><br></pre></td></tr></table></figure></p>
+<h1 id="绘线">绘线</h1>
+<p>如何去绘制一条从一个六边形格子到另一个六边形格子的线呢？我使用线性插值来绘制线条。在N+1个点上均匀地对线进行采样，并且查找出这些采样点对应的六边形格子。
+1. 首先我们计算N=x为端点的六边形网格距离。 2.
+然后均匀的在点A和点B之间进行N+1点的采样。使用线性插值，每个点将是A+(B-A)<em>1.0/N
+</em> i，值i从0到N。这采样的结果点坐标是浮点型的。 3.
+转换浮点型的坐标到六边形的整形坐标。这个算法被叫做<a
+href="https://www.redblobgames.com/grids/hexagons/#rounding">cube_round</a>。</p>
+<p>将上面步骤整合后绘制一条从A到B的线。 <figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">lerp</span>(<span class="params">a, b, t</span>): // <span class="title">for</span> <span class="title">floats</span></span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">a</span> + (<span class="params">b - a</span>) * <span class="title">t</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">cube_lerp</span>(<span class="params">a, b, t</span>): // <span class="title">for</span> <span class="title">hexes</span></span></span><br><span class="line"><span class="function">    <span class="title">return</span> <span class="title">Cube</span>(<span class="params">lerp(a.q, b.q, t</span>),</span></span><br><span class="line"><span class="function">                <span class="title">lerp</span>(<span class="params">a.r, b.r, t</span>),</span></span><br><span class="line"><span class="function">                <span class="title">lerp</span>(<span class="params">a.s, b.s, t</span>))</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="title">function</span> <span class="title">cube_linedraw</span>(<span class="params">a, b</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">N</span> = <span class="title">cube_distance</span>(<span class="params">a, b</span>)</span></span><br><span class="line">    var results = []</span><br><span class="line">    <span class="keyword">for</span> each <span class="number">0</span> ≤ i ≤ N:</span><br><span class="line">        results.append(cube_round(cube_lerp(a, b, <span class="number">1.0</span>/N * i)))</span><br><span class="line">    <span class="keyword">return</span> results</span><br></pre></td></tr></table></figure> <img
+src="/images/map/drawing_line.png" alt="绘线" /></p>
+<h1 id="移动范围">移动范围</h1>
+<h2 id="坐标范围">坐标范围</h2>
+<p>给定一个六边形中心和和范围N,
+哪些六边形在距离它的N步内？我们依据前面讲解的距离公式，distance=max(abs(q),abs(r),
+abs(s)),去查找都在N范围内的六边形，我们需要max(abs(q),abs(r), abs(s))
+&lt;= N。这意味着需要满足<span class="math inline">\(abs(q)\le
+N，abs(r)&lt;=N\)</span>以及<span class="math inline">\(abs(s)\le
+N\)</span>。移除绝对值符号，我们将得到<span class="math inline">\(-N \le
+q \le +N\)</span>, <span class="math inline">\(-N \le r \le
++N\)</span>以及<span class="math inline">\(-N \le s \le +N\)</span>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> results = []</span><br><span class="line"><span class="keyword">for</span> each -N ≤ q ≤ +N:</span><br><span class="line">    <span class="keyword">for</span> each -N ≤ r ≤ +N:</span><br><span class="line">        <span class="keyword">for</span> each -N ≤ s ≤ +N:</span><br><span class="line">            <span class="keyword">if</span> q + r + s == <span class="number">0</span>:</span><br><span class="line">                results.append(cube_add(center, Cube(q, r, s)))</span><br></pre></td></tr></table></figure>
+这个循环是能够正常运行的，但是有些低效。s的所有值循环完后只有一个满足q+r+s=0的限制。我们可以直接计算满足限制的s的值：
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> results = []</span><br><span class="line"><span class="keyword">for</span> each -N ≤ q ≤ +N:</span><br><span class="line">    <span class="keyword">for</span> each max(-N, -q-N) ≤ r ≤ min(+N, -q+N):</span><br><span class="line">        <span class="keyword">var</span> s = -q-r</span><br><span class="line">        results.append(cube_add(center, Cube(q, r, s)))</span><br></pre></td></tr></table></figure> 这个循环迭代完确切需要的坐标。在图中，每个范围都是一对线。
+每条线都是一个不等式（半平面）。我们选择满足所有六个不等式的所有六边形。这个循环在轴坐标中也有效：
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> results = []</span><br><span class="line"><span class="keyword">for</span> each -N ≤ q ≤ +N:</span><br><span class="line">    <span class="keyword">for</span> each max(-N, -q-N) ≤ r ≤ min(+N, -q+N):</span><br><span class="line">        results.append(axial_add(center, Hex(q, r)))</span><br></pre></td></tr></table></figure> <img src="/images/map/range.png" alt="范围" /></p>
+<h2 id="相交范围">相交范围</h2>
+<p>如果你要查找多个范围的六边形，你能在产生一个六边形列表前将这些范围相交。
+你可以用代数和几何方法来思路这个问题。
+代数，每个六边形范围可以用一个不等<span class="math inline">\(-N \le dq
+\le +N\)</span>表示，并且我们将解决这些约束的交集。
+几何，在3D空间中，每个范围是一个立方体，并且我们准备在3D空间中让这两个立方体相交。然后投影回q+r+s=0的平面去获得对应的六边形。我们打算使用代数方式去解决相交的问题：
+首先，我们重写<span class="math inline">\(-N \le dq \le
++N\)</span>限制为一般形式，<span class="math inline">\(q_{min} \le q \le
+q_{max}\)</span> 并且设置q_{min} = center.q-N，q_{max} =
+center.q+N。对于r和s也是一样，最后从上一节的代码中概括得到： <figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> results = []</span><br><span class="line"><span class="keyword">for</span> each $q_&#123;min&#125;$ ≤ q ≤ $q_&#123;max&#125;$:</span><br><span class="line">    <span class="keyword">for</span> each max($r_&#123;min&#125;$, -q-$s_&#123;max&#125;$) ≤ r ≤ min($r_&#123;max&#125;$, -q-$s_&#123;min&#125;$):</span><br><span class="line">        results.append(Hex(q, r))</span><br></pre></td></tr></table></figure>
+两个范围<span class="math inline">\(a \le q \le b\)</span>和<span
+class="math inline">\(c \le q \le d\)</span>相交得<span
+class="math inline">\(max(a,c) \le q \le min(b,
+d)\)</span>。由于六边形区域表示为 q, r, s 上的范围，我们可以分别与 q, r,
+s
+范围中的每一个相交，然后使用嵌套循环在相交处生成六边形列表。对于一个六边形区域，我们设置
+<span class="math inline">\(q_{min} = H.q - N\)</span> 和 <span
+class="math inline">\(q_{max} = H.q + N\)</span> 并且对于 r 和 s
+也是如此。 对于相交的两个六边形区域，我们设置 <span
+class="math inline">\(q_{min} = max(H1.q - N, H2.q - N)\)</span> 和
+<span class="math inline">\(q_{max} = min(H1.q + N, H2.q +
+N)\)</span>，对于 r 和 s
+也是如此。这样的模式对于多个区域也是有效的，并且能够泛化到其他的形状（三角形，梯形，菱形和不规则的六边形）。
+<img src="/images/map/intersecting.png" alt="相交" /></p>
+<h2 id="障碍">障碍</h2>
+<p>如果有障碍物，最简单的做法是有限距离的洪水填充（flood
+fill）（广度优先搜索）。 在此图中，限制设置为移动。 在代码中，
+fringes[k] 是可以在 k 步内到达的所有六边形的数组。
+每次通过主循环，我们将级别 k-1 扩展为级别 k。
+这同样适用于任何六边形坐标系（立方体、轴向、偏移、加倍）。 <figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">hex_reachable</span>(<span class="params">start, movement</span>):</span></span><br><span class="line"><span class="function">    <span class="title">var</span> <span class="title">visited</span> = <span class="title">set</span>(<span class="params"></span>) # <span class="title">set</span> <span class="title">of</span> <span class="title">hexes</span></span></span><br><span class="line"><span class="function">    <span class="title">add</span> <span class="title">start</span> <span class="title">to</span> <span class="title">visited</span></span></span><br><span class="line">    var fringes = [] # array of arrays of hexes</span><br><span class="line">    fringes.append([start])</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> each <span class="number">1</span> &lt; k ≤ movement:</span><br><span class="line">        fringes.append([])</span><br><span class="line">        <span class="keyword">for</span> each hex <span class="keyword">in</span> fringes[k<span class="number">-1</span>]:</span><br><span class="line">            <span class="keyword">for</span> each <span class="number">0</span> ≤ dir &lt; <span class="number">6</span>:</span><br><span class="line">                <span class="keyword">var</span> neighbor = hex_neighbor(hex, dir)</span><br><span class="line">                <span class="keyword">if</span> neighbor not <span class="keyword">in</span> visited and not blocked:</span><br><span class="line">                    add neighbor to visited</span><br><span class="line">                    fringes[k].append(neighbor)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> visited</span><br></pre></td></tr></table></figure>
+<img src="/images/map/obstacles.png" alt="障碍" /></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/Map/" rel="tag"><i class="fa fa-tag"></i> Map</a>
+              <a href="/tags/%E7%BF%BB%E8%AF%91/" rel="tag"><i class="fa fa-tag"></i> 翻译</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2021/11/29/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/Lua/Lua%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/" rel="next" title="Lua虚拟机源码阅读">
+                  <i class="fa fa-chevron-left"></i> Lua虚拟机源码阅读
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2022/06/28/Unity/Graphics/ShaderLab/" rel="prev" title="Unity ShaderLab">
+                  Unity ShaderLab <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#几何性质"><span class="nav-number">1.</span> <span class="nav-text">几何性质</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#角度"><span class="nav-number">1.1.</span> <span class="nav-text">角度</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#大小size和间距spacing"><span class="nav-number">1.2.</span> <span class="nav-text">大小(size)和间距(Spacing)</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#坐标系统"><span class="nav-number">2.</span> <span class="nav-text">坐标系统</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#偏移坐标offset-coordinates"><span class="nav-number">2.1.</span> <span class="nav-text">偏移坐标（Offset coordinates）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#立方体坐标cube-coordinates"><span class="nav-number">2.2.</span> <span class="nav-text">立方体坐标（Cube coordinates）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#轴向坐标axial-coordinates"><span class="nav-number">2.3.</span> <span class="nav-text">轴向坐标（Axial coordinates）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#双倍坐标doubled-coordinates"><span class="nav-number">2.4.</span> <span class="nav-text">双倍坐标（Doubled
+coordinates）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#推荐"><span class="nav-number">2.5.</span> <span class="nav-text">推荐</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#坐标转换"><span class="nav-number">3.</span> <span class="nav-text">坐标转换</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#轴向坐标"><span class="nav-number">3.1.</span> <span class="nav-text">轴向坐标</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#偏移坐标"><span class="nav-number">3.2.</span> <span class="nav-text">偏移坐标</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#双倍坐标"><span class="nav-number">3.3.</span> <span class="nav-text">双倍坐标</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#相邻六边形neighbors"><span class="nav-number">4.</span> <span class="nav-text">相邻六边形（Neighbors）</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#立方体坐标"><span class="nav-number">4.1.</span> <span class="nav-text">立方体坐标</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#轴坐标"><span class="nav-number">4.2.</span> <span class="nav-text">轴坐标</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#偏移坐标-1"><span class="nav-number">4.3.</span> <span class="nav-text">偏移坐标</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#双倍坐标-1"><span class="nav-number">4.4.</span> <span class="nav-text">双倍坐标</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#对角线"><span class="nav-number">4.5.</span> <span class="nav-text">对角线</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#距离"><span class="nav-number">5.</span> <span class="nav-text">距离</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#立方体坐标-1"><span class="nav-number">5.1.</span> <span class="nav-text">立方体坐标</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#轴坐标-1"><span class="nav-number">5.2.</span> <span class="nav-text">轴坐标</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#偏移坐标-2"><span class="nav-number">5.3.</span> <span class="nav-text">偏移坐标</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#双倍坐标-2"><span class="nav-number">5.4.</span> <span class="nav-text">双倍坐标</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#绘线"><span class="nav-number">6.</span> <span class="nav-text">绘线</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#移动范围"><span class="nav-number">7.</span> <span class="nav-text">移动范围</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#坐标范围"><span class="nav-number">7.1.</span> <span class="nav-text">坐标范围</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#相交范围"><span class="nav-number">7.2.</span> <span class="nav-text">相交范围</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#障碍"><span class="nav-number">7.3.</span> <span class="nav-text">障碍</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <img class="site-author-image" itemprop="image" alt="张卫"
+    src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">张卫</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">31</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/zw514159799" title="CSDN &amp;rarr; https:&#x2F;&#x2F;blog.csdn.net&#x2F;zw514159799" rel="noopener" target="_blank"><i class="fa fa-fw fa-csdn"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://github.com/Divad1111?tab=repositories" title="GitHub &amp;rarr; https:&#x2F;&#x2F;github.com&#x2F;Divad1111?tab&#x3D;repositories" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.cnblogs.com/qilezaitu" title="博客园 &amp;rarr; https:&#x2F;&#x2F;www.cnblogs.com&#x2F;qilezaitu" rel="noopener" target="_blank"><i class="fa fa-fw fa-cnblogs"></i>博客园</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://baidu.com/" title="https:&#x2F;&#x2F;baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://bing.com/" title="https:&#x2F;&#x2F;bing.com" rel="noopener" target="_blank">Bing</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2019 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">张卫</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-area-chart"></i>
+    </span>
+      <span class="post-meta-item-text">站点总字数：</span>
+    <span title="站点总字数">542k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">8:13</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.1
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.5.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+<script type="text/x-mathjax-config">
+
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$', '$'], ['\\(', '\\)'] ],
+      processEscapes: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    },
+    TeX: {
+      equationNumbers: {
+        autoNumber: 'AMS'
+      }
+    }
+  });
+
+  MathJax.Hub.Register.StartupHook('TeX Jax Ready', function() {
+    MathJax.InputJax.TeX.prefilterHooks.Add(function(data) {
+      if (data.display) {
+        var next = data.script.nextSibling;
+        while (next && next.nodeName.toLowerCase() === '#text') {
+          next = next.nextSibling;
+        }
+        if (next && next.nodeName.toLowerCase() === 'br') {
+          next.parentNode.removeChild(next);
+        }
+      }
+    });
+  });
+
+  MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for (i = 0; i < all.length; i += 1) {
+      element = document.getElementById(all[i].inputID + '-Frame').parentNode;
+      if (element.nodeName.toLowerCase() == 'li') {
+        element = element.parentNode;
+      }
+      element.classList.add('has-jax');
+    }
+  });
+</script>
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/mathjax@2/MathJax.js?config=TeX-AMS-MML_HTMLorMML', () => {
+    MathJax.Hub.Typeset();
+  }, window.MathJax);
+</script>
+
+    
+
+  
+
+</body>
+</html>

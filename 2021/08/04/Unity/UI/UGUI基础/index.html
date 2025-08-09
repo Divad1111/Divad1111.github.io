@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="Canvas的渲染 渲染基本层次 基本渲染层次是根据可视化对象在继承窗口中的显示顺序来渲染的，在此有两种方式可以调节对象的顺序。第一种：直接在继承窗口拖拽。第二种：通过Transform的SetAsFirstSibling, SetAsLastSibling, and SetSiblingIndex函数来进行调节。 渲染模式  屏幕覆盖模式  直接屏幕映射方式显示，永远在屏幕的最上面，跟相机无关即">
+<meta property="og:type" content="article">
+<meta property="og:title" content="UGUI基础">
+<meta property="og:url" content="http://yoursite.com/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/index.html">
+<meta property="og:site_name" content="张卫的博客">
+<meta property="og:description" content="Canvas的渲染 渲染基本层次 基本渲染层次是根据可视化对象在继承窗口中的显示顺序来渲染的，在此有两种方式可以调节对象的顺序。第一种：直接在继承窗口拖拽。第二种：通过Transform的SetAsFirstSibling, SetAsLastSibling, and SetSiblingIndex函数来进行调节。 渲染模式  屏幕覆盖模式  直接屏幕映射方式显示，永远在屏幕的最上面，跟相机无关即">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-08-04T09:52:28.000Z">
+<meta property="article:modified_time" content="2025-04-26T11:06:24.132Z">
+<meta property="article:author" content="张卫">
+<meta property="article:tag" content="UI">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://yoursite.com/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>UGUI基础 | 张卫的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">张卫的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">Done is better than perfect</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/08/04/Unity/UI/UGUI%E5%9F%BA%E7%A1%80/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          UGUI基础
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-08-04 17:52:28" itemprop="dateCreated datePublished" datetime="2021-08-04T17:52:28+08:00">2021-08-04</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2025-04-26 19:06:24" itemprop="dateModified" datetime="2025-04-26T19:06:24+08:00">2025-04-26</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Unity/" itemprop="url" rel="index">
+                    <span itemprop="name">Unity</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="canvas的渲染">Canvas的渲染</h1>
+<h2 id="渲染基本层次">渲染基本层次</h2>
+<p>基本渲染层次是根据可视化对象在继承窗口中的显示顺序来渲染的，在此有两种方式可以调节对象的顺序。第一种：直接在继承窗口拖拽。第二种：通过Transform的SetAsFirstSibling,
+SetAsLastSibling, and SetSiblingIndex函数来进行调节。</p>
+<h2 id="渲染模式">渲染模式</h2>
+<ul>
+<li><strong>屏幕覆盖模式</strong></li>
+</ul>
+<p>直接屏幕映射方式显示，永远在屏幕的最上面，跟相机无关即使没有相机也可以显示</p>
+<ul>
+<li><strong>屏幕相机模式</strong></li>
+</ul>
+<p>此模式和屏幕模式相似但是受到相机的限制，但是始终都显示在相机的前面，如果有3D物体在UI的前面也是会挡住UI。</p>
+<ul>
+<li><strong>世界模式</strong></li>
+</ul>
+<p>把Canvas当成普通的对象在世界坐标系中定位渲染。</p>
+<a id="more"></a>
+<h1 id="canvas的屏幕适配策略">Canvas的屏幕适配策略</h1>
+<p>UGUI中的屏幕适配只需要在Canvas下挂一个CanvasScaler组件就行了。
+适配模式分为3种：</p>
+<ul>
+<li><strong>固定像素</strong></li>
+</ul>
+<p>忽略屏幕的大小根据UI元素的实际像素显示</p>
+<ul>
+<li><strong>根据屏幕大小进行缩放（也是最常用的一项）</strong></li>
+</ul>
+<p>此项会根据设备真实分辨率与设计分辨率来对Canvas进行缩放。有三种模式：
+1.Match Width or Height
+根据宽或者高来对Canvas进行缩放，比如设备分辨率为1920x900，设计分辨率为1280x720，此时，如果采用宽进行匹配那么可以通过公式计算出此时应该缩放多少倍，公式如下：
+缩放因子：1920/1280 = 1.5 缩放后的Canvas的宽为：1920（刚好能够完全显示）
+缩放后的Canvas的高为：720x1.5 = 1080
+由于设备的高为900所以会导致高度上的一部分不会被显示出来 2.Expand
+适配的计算公式同上，只是在此模式下会保证设计分辨率下的东西能够全部显示出来，及选择设备分辨率和设计分辨率的宽、高比中选择最小值作为缩放因子。
+3.Shrink
+和Expand恰好相反，在此模式下不会留黑边但是会导致显示不完全。及选择设备分辨率和设计分辨率的宽、高比中选择最大值作为缩放因子。</p>
+<ul>
+<li><strong>固定物理大小</strong></li>
+</ul>
+<p>忽略屏幕大小和分辨率根据UI的实际物理大小来显示。</p>
+<h1 id="可视化对象">可视化对象</h1>
+<ul>
+<li><strong>Text</strong></li>
+</ul>
+<p>同NGUI的Label.富文本格式参见：<a
+href="http://docs.unity3d.com/Manual/StyledText.html">http://docs.unity3d.com/Manual/StyledText.html</a></p>
+<ul>
+<li><strong>Image</strong></li>
+</ul>
+<p>同NGUI的Sprite</p>
+<ul>
+<li><strong>RawImage</strong></li>
+</ul>
+<p>同NGUI的Texture</p>
+<ul>
+<li><strong>Mask</strong></li>
+</ul>
+<p>此可视化组件是不可见的，只是用于定义一个子对象的显示区域不能超过父对象的显示区域，超出部分将被剪切掉。同NGUI
+Panel的剪切功能。在Unity5.3里有两个Mask组件 1.Mask 2.RectMask2D</p>
+<ul>
+<li><strong>Effects</strong></li>
+</ul>
+<p>1.Shadow 2.Outline 3.PositionAsUI1(未知功能)</p>
+<h1 id="布局系统">布局系统</h1>
+<h2 id="基础布局">基础布局</h2>
+<h3 id="rect-tool">Rect Tool</h3>
+<p>选中此工具后，我们就可以在场景视图中编辑它的大小，位置，缩放，轴心点和锚点。
+Toolbar buttons with Rect Tool selected</p>
+<h3 id="rect-transform">Rect Transform</h3>
+<p>功能同Rect Tool只是此组件是需要自己手动输入参数。</p>
+<h4 id="pivot轴心点">Pivot(轴心点)</h4>
+<p>旋转，大小和缩放的修改都依赖于Pivo的位置。当ToolTar设置了Pivot时，Rect
+Transform的Pivot能够在场景中被移动。 Toolbar buttons set to Pivot and
+Local</p>
+<h4 id="anchors">Anchors</h4>
+<p>有两种情况，在每种情况下Rect Transform显示是不同的如下：
+1.四个锚点都在一起的情况
+在此种状态可视化组件可以根据屏幕的任意位置来定进行定位，大小不会根据屏幕的大小的改变而调整。</p>
+<p>2.四个锚点分开的情况
+在此种状态下可视化组件的大小会根据屏幕的大小改变而调整可视化组件的大小。下图中Left,Right,Top和Bottom表示与这四个锚点构成的矩形的边的距离。</p>
+<p>更详细的说明参见官方文档：<a
+href="http://docs.unity3d.com/Manual/UIBasicLayout.html">http://docs.unity3d.com/Manual/UIBasicLayout.html</a></p>
+<h2 id="自动布局">自动布局</h2>
+<p>自动布局系统依赖于基础布局系统。自动布局系统有两部分组成：布局元素和布局控制器。</p>
+<h3 id="布局元素">布局元素</h3>
+<p>布局元素定义了如下尺寸：</p>
+<ul>
+<li>Minimum width</li>
+<li>Minimum height</li>
+<li>Preferred width</li>
+<li>Preferred height</li>
+<li>Flexible width</li>
+<li>Flexible height</li>
+</ul>
+<p>可以通过ILayoutElement接口查看他们的定义： <figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title">ILayoutElement</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">float</span> flexibleHeight &#123; <span class="keyword">get</span>; &#125;</span><br><span class="line">        <span class="keyword">float</span> flexibleWidth &#123; <span class="keyword">get</span>; &#125;</span><br><span class="line">        <span class="keyword">int</span> layoutPriority &#123; <span class="keyword">get</span>; &#125;</span><br><span class="line">        <span class="keyword">float</span> minHeight &#123; <span class="keyword">get</span>; &#125;</span><br><span class="line">        <span class="keyword">float</span> minWidth &#123; <span class="keyword">get</span>; &#125;</span><br><span class="line">        <span class="keyword">float</span> preferredHeight &#123; <span class="keyword">get</span>; &#125;</span><br><span class="line">        <span class="keyword">float</span> preferredWidth &#123; <span class="keyword">get</span>; &#125;</span><br><span class="line">        <span class="function"><span class="keyword">void</span> <span class="title">CalculateLayoutInputHorizontal</span>(<span class="params"></span>)</span>;</span><br><span class="line">        <span class="function"><span class="keyword">void</span> <span class="title">CalculateLayoutInputVertical</span>(<span class="params"></span>)</span>;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure></p>
+<p>每个可视化对象都继承了ILayoutElement来控制自己的大小。当然也可以通过LayoutElement组件去重写这些属性。</p>
+<h3 id="布局控制器">布局控制器</h3>
+<p>布局控制器是根据布局元素定义的大小属性来确定自己或子对象的大小和位置的。
+布局控制器有两种类型的控制器：控制自己和控制子对象</p>
+<p><strong>控制自己</strong></p>
+<p>ContentSizeFitter:内容填充 Aspect Ratio Fitter：比例控制</p>
+<p><strong>控制子对象</strong></p>
+<p>Horizontal Layout Group：让子对象水平排布 Vertical Layout
+Group：让子对象垂直排布 Grid Layout Group：让子对象按网格排布</p>
+<h3 id="局控计算顺序">局控计算顺序</h3>
+<p>1.计算自己的宽（子在父之前计算），通过调用ILayoutElement的CalculateLayoutInputHorizontal
+2.控制器计算宽，通过调用ILayoutController的SetLayoutHorizontal
+3.计算自己的高（子在父之前计算）， 通过调用ILayoutElement
+的CalculateLayoutInputVertical
+4.控制器计算高，通过调用ILayoutController的SetLayoutVertical</p>
+<h3 id="布局控重建触发时机">布局控重建触发时机</h3>
+<p>通过调用LayoutRebuilder.MarkLayoutForRebuild后在下一帧进行重建。</p>
+<ul>
+<li>在设置了能够改变布局属性的时候</li>
+<li>在一下回调被调用的时候</li>
+<li>OnEnable</li>
+<li>OnDisable</li>
+<li>OnRectTransformDimensionsChange</li>
+<li>OnValidate （仅在编辑器有效）</li>
+<li>OnDidApplyAnimationProperties</li>
+</ul>
+<h1 id="交互式组件">交互式组件</h1>
+<p>交互式组件是用于处理鼠标，键盘，Touches和控制器的交互的组件，此组件是不可见的必须与一个或多个可视化组件一起使用。
+交互式组件的公共功能能被放在了Selectable中，其中包括了交互组件的状态（normal,
+highlighted, pressed, disabled）切换，以及交换式组件的导航。</p>
+<h3 id="button">Button</h3>
+<p>按钮组件，通过OnClick来相应单击事件。</p>
+<h3 id="toggle">Toggle</h3>
+<p>Toggle是一个复选框，OnValueChanged监听它的值改变。</p>
+<h3 id="toggle-group">Toggle Group</h3>
+<p>Toggle Group是一个单选框</p>
+<h3 id="slider">Slider</h3>
+<p>滑动器控件</p>
+<h3 id="scrollbar">Scrollbar</h3>
+<p>滚动条控件，通常联合Scroll Rect 和 Mask制作滚动视图。</p>
+<h3 id="input-field">Input Field</h3>
+<p>输入字段控件</p>
+<h3 id="scroll-rect">Scroll Rect</h3>
+<p>同NGUI的ScrollView.需要配合Mask一起制作。</p>
+<p>注意：一般在一个对象上不会挂两个交互式组件。</p>
+<h1 id="事件系统">事件系统</h1>
+<p>事件系统是一中发送输入信息（比如像鼠标，键盘和Touches等的事件）到对象上的一种方法。
+在事件系统中包括了两个主要模块：</p>
+<h2 id="输入模块">输入模块</h2>
+<p>输入模块决定了事件系统的将有怎么样的行为。主要作用如下：</p>
+<ul>
+<li>处理输入</li>
+<li>管理事件状态</li>
+<li>发送事件到场景对象</li>
+</ul>
+<p>同一时刻只有一个输入模块作用于事件系统，输入模块必须和EventSystem组件在同一个对象上。</p>
+<h2 id="raycasters射线器">Raycasters（射线器）</h2>
+<p>Raycasters主要被用于检查发送指针进入，离开和悬浮在对象。它通常用于输入模块去计算设备指针的进入，离开和悬浮等
+Unity提供了3种类型的Raycasters：</p>
+<ul>
+<li>Graphic Raycaster 用于UI</li>
+<li>Physics 2D Raycaster 用于2D 物理元素</li>
+<li>Physics Raycaster 用于3D物理元素</li>
+</ul>
+<h2 id="扩展自定义消息">扩展自定义消息</h2>
+<p>从IEventSystemHandler借口派生一个接口出来就定义了一个消息
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title">ICustomMessageTarget</span> : <span class="title">IEventSystemHandler</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// functions that can be called via the messaging system</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">Message1</span>(<span class="params"></span>)</span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">Message2</span>(<span class="params"></span>)</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>通过ExecuteEvents类可以发送一个消息，此类是消息的的帮助类，可以查看，验证一个对象上的消息接口。</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ExecuteEvents.Execute&lt;ICustomMessageTarget&gt;(target, <span class="literal">null</span>, (x,y)=&gt;x.Message1());</span><br></pre></td></tr></table></figure>
+<h2 id="支持的事件">支持的事件</h2>
+<ul>
+<li>IPointerEnterHandler - OnPointerEnter - Called when a pointer enters
+the object</li>
+<li>IPointerExitHandler - OnPointerExit - Called when a pointer exits
+the object</li>
+<li>IPointerDownHandler - OnPointerDown - Called when a pointer is
+pressed on the object</li>
+<li>IPointerUpHandler - OnPointerUp - Called when a pointer is released
+(called on the original the pressed object)</li>
+<li>IPointerClickHandler - OnPointerClick - Called when a pointer is
+pressed and released on the same object</li>
+<li>IInitializePotentialDragHandler - OnInitializePotentialDrag - Called
+when a drag target is found, can be used to initialise values</li>
+<li>IBeginDragHandler - OnBeginDrag - Called on the drag object when
+dragging is about to begin</li>
+<li>IDragHandler - OnDrag - Called on the drag object when a drag is
+happening</li>
+<li>IEndDragHandler - OnEndDrag - Called on the drag object when a drag
+finishes</li>
+<li>IDropHandler - OnDrop - Called on the object where a drag
+finishes</li>
+<li>IScrollHandler - OnScroll - Called when a mouse wheel scrolls</li>
+<li>IUpdateSelectedHandler - OnUpdateSelected - Called on the selected
+object each tick</li>
+<li>ISelectHandler - OnSelect - Called when the object becomes the
+selected object</li>
+<li>IDeselectHandler - OnDeselect - Called on the selected object
+becomes deselected</li>
+<li>IMoveHandler - OnMove - Called when a move event occurs (left,
+right, up, down, ect)</li>
+<li>ISubmitHandler - OnSubmit - Called when the submit button is
+pressed</li>
+<li>ICancelHandler - OnCancel - Called when the cancel button is
+pressed</li>
+</ul>
+<h1 id="参考文献">参考文献</h1>
+<p>Unity官网-UI<a
+href="http://docs.unity3d.com/Manual/UISystem.html">http://docs.unity3d.com/Manual/EventSystem.html</a></p>
+<p>Unity官网-EventSystem<a
+href="http://docs.unity3d.com/Manual/EventSystem.html">http://docs.unity3d.com/Manual/EventSystem.html</a></p>
+<h1 id="附录-组成结构图">附录-组成结构图</h1>
+<figure>
+<img
+src="https://img-blog.csdnimg.cn/img_convert/82530bf82c813a1a1062fb4bb7b4dace.png"
+alt="UGUI组成结构图" />
+<figcaption aria-hidden="true">UGUI组成结构图</figcaption>
+</figure>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/UI/" rel="tag"><i class="fa fa-tag"></i> UI</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2021/08/04/Unity/UI/UGUI%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" rel="next" title="UGUI源码分析">
+                  <i class="fa fa-chevron-left"></i> UGUI源码分析
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2021/11/05/Unity/Graphics/Unity%E6%B8%B2%E6%9F%93%E7%AE%A1%E7%BA%BF%E4%BB%8B%E7%BB%8D/" rel="prev" title="Unity渲染管线介绍">
+                  Unity渲染管线介绍 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#canvas的渲染"><span class="nav-number">1.</span> <span class="nav-text">Canvas的渲染</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#渲染基本层次"><span class="nav-number">1.1.</span> <span class="nav-text">渲染基本层次</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#渲染模式"><span class="nav-number">1.2.</span> <span class="nav-text">渲染模式</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#canvas的屏幕适配策略"><span class="nav-number">2.</span> <span class="nav-text">Canvas的屏幕适配策略</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#可视化对象"><span class="nav-number">3.</span> <span class="nav-text">可视化对象</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#布局系统"><span class="nav-number">4.</span> <span class="nav-text">布局系统</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#基础布局"><span class="nav-number">4.1.</span> <span class="nav-text">基础布局</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#rect-tool"><span class="nav-number">4.1.1.</span> <span class="nav-text">Rect Tool</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#rect-transform"><span class="nav-number">4.1.2.</span> <span class="nav-text">Rect Transform</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#pivot轴心点"><span class="nav-number">4.1.2.1.</span> <span class="nav-text">Pivot(轴心点)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#anchors"><span class="nav-number">4.1.2.2.</span> <span class="nav-text">Anchors</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#自动布局"><span class="nav-number">4.2.</span> <span class="nav-text">自动布局</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#布局元素"><span class="nav-number">4.2.1.</span> <span class="nav-text">布局元素</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#布局控制器"><span class="nav-number">4.2.2.</span> <span class="nav-text">布局控制器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#局控计算顺序"><span class="nav-number">4.2.3.</span> <span class="nav-text">局控计算顺序</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#布局控重建触发时机"><span class="nav-number">4.2.4.</span> <span class="nav-text">布局控重建触发时机</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#交互式组件"><span class="nav-number">5.</span> <span class="nav-text">交互式组件</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#button"><span class="nav-number">5.0.1.</span> <span class="nav-text">Button</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#toggle"><span class="nav-number">5.0.2.</span> <span class="nav-text">Toggle</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#toggle-group"><span class="nav-number">5.0.3.</span> <span class="nav-text">Toggle Group</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#slider"><span class="nav-number">5.0.4.</span> <span class="nav-text">Slider</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#scrollbar"><span class="nav-number">5.0.5.</span> <span class="nav-text">Scrollbar</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#input-field"><span class="nav-number">5.0.6.</span> <span class="nav-text">Input Field</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#scroll-rect"><span class="nav-number">5.0.7.</span> <span class="nav-text">Scroll Rect</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#事件系统"><span class="nav-number">6.</span> <span class="nav-text">事件系统</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#输入模块"><span class="nav-number">6.1.</span> <span class="nav-text">输入模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#raycasters射线器"><span class="nav-number">6.2.</span> <span class="nav-text">Raycasters（射线器）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#扩展自定义消息"><span class="nav-number">6.3.</span> <span class="nav-text">扩展自定义消息</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#支持的事件"><span class="nav-number">6.4.</span> <span class="nav-text">支持的事件</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文献"><span class="nav-number">7.</span> <span class="nav-text">参考文献</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#附录-组成结构图"><span class="nav-number">8.</span> <span class="nav-text">附录-组成结构图</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <img class="site-author-image" itemprop="image" alt="张卫"
+    src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">张卫</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">31</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/zw514159799" title="CSDN &amp;rarr; https:&#x2F;&#x2F;blog.csdn.net&#x2F;zw514159799" rel="noopener" target="_blank"><i class="fa fa-fw fa-csdn"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://github.com/Divad1111?tab=repositories" title="GitHub &amp;rarr; https:&#x2F;&#x2F;github.com&#x2F;Divad1111?tab&#x3D;repositories" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.cnblogs.com/qilezaitu" title="博客园 &amp;rarr; https:&#x2F;&#x2F;www.cnblogs.com&#x2F;qilezaitu" rel="noopener" target="_blank"><i class="fa fa-fw fa-cnblogs"></i>博客园</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://baidu.com/" title="https:&#x2F;&#x2F;baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://bing.com/" title="https:&#x2F;&#x2F;bing.com" rel="noopener" target="_blank">Bing</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2019 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">张卫</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-area-chart"></i>
+    </span>
+      <span class="post-meta-item-text">站点总字数：</span>
+    <span title="站点总字数">542k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">8:13</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.1
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.5.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

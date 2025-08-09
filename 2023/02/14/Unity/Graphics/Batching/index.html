@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="要在屏幕上绘制几何体时，Unity会调用底层的图形API的Draw命令进行绘制。一个Draw命令高数图形API绘制什么以及如何绘制。每个Draw命令都包含图形API所需的所有信息，其中包括texture,shader和buffers数据。绘图调用可能是资源密集型的，但绘图调用的准备工作通常比绘图调用本身更耗费资源。 准备绘制调用时，CPU去构建资源并通过图形API改变GPU的内部设置。这些设置统称">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Static Batching, Dynamic Batching, GUP Instancing和SRP Batcher">
+<meta property="og:url" content="http://yoursite.com/2023/02/14/Unity/Graphics/Batching/index.html">
+<meta property="og:site_name" content="张卫的博客">
+<meta property="og:description" content="要在屏幕上绘制几何体时，Unity会调用底层的图形API的Draw命令进行绘制。一个Draw命令高数图形API绘制什么以及如何绘制。每个Draw命令都包含图形API所需的所有信息，其中包括texture,shader和buffers数据。绘图调用可能是资源密集型的，但绘图调用的准备工作通常比绘图调用本身更耗费资源。 准备绘制调用时，CPU去构建资源并通过图形API改变GPU的内部设置。这些设置统称">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://yoursite.com/images/unity/batching/static_no_continue.png">
+<meta property="og:image" content="http://yoursite.com/images/unity/batching/static_continue.png">
+<meta property="og:image" content="http://yoursite.com/images/unity/batching/SROShaderPass.png">
+<meta property="og:image" content="http://yoursite.com/images/unity/batching/SRP_Batcher_loop.png">
+<meta property="article:published_time" content="2023-02-14T00:45:18.000Z">
+<meta property="article:modified_time" content="2025-04-26T11:06:24.129Z">
+<meta property="article:author" content="张卫">
+<meta property="article:tag" content="Batching">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yoursite.com/images/unity/batching/static_no_continue.png">
+
+<link rel="canonical" href="http://yoursite.com/2023/02/14/Unity/Graphics/Batching/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>Static Batching, Dynamic Batching, GUP Instancing和SRP Batcher | 张卫的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">张卫的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">Done is better than perfect</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2023/02/14/Unity/Graphics/Batching/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Static Batching, Dynamic Batching, GUP Instancing和SRP Batcher
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-02-14 08:45:18" itemprop="dateCreated datePublished" datetime="2023-02-14T08:45:18+08:00">2023-02-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2025-04-26 19:06:24" itemprop="dateModified" datetime="2025-04-26T19:06:24+08:00">2025-04-26</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Unity/" itemprop="url" rel="index">
+                    <span itemprop="name">Unity</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>要在屏幕上绘制几何体时，Unity会调用底层的图形API的Draw命令进行绘制。一个Draw命令高数图形API绘制什么以及如何绘制。每个Draw命令都包含图形API所需的所有信息，其中包括texture,shader和buffers数据。绘图调用可能是资源密集型的，但绘图调用的准备工作通常比绘图调用本身更耗费资源。</p>
+<p>准备绘制调用时，CPU去构建资源并通过图形API改变GPU的内部设置。这些设置统称为渲染状态。改变这些渲染状态通常时资源密集型的操作，比如切换不同的材质时。
+因为渲染状态的改变是资源密集型的，所有减少渲染状态改变的次数是主要的优化方法，这有两种方法能到达此目的：</p>
+<ul>
+<li>减少总的绘制调用</li>
+<li>有效组织绘制调用，以减少渲染状态的切换。</li>
+</ul>
+<p>优化绘制调用和渲染状态改变数量，主要减少每帧的时间，它也能：</p>
+<ul>
+<li>减少应用程序的电池的消耗。</li>
+<li>提高应用程序未来开发的可维护性。当你更早的优化绘制调用和渲染状态改变，那么它将长期维持在一个相对优化的级别。</li>
+</ul>
+<p>Unity提供了如下几种优化绘制调用和渲染状态的方法，一些方法只适用于特定的场景。</p>
+<ul>
+<li>Static Batching :
+静态合并Mesh来减少绘制调用和渲染状态的改变。需要将对象标记为static。Unity将组合数据发送到GPU，但单独渲染组合中的每个网格。<strong>Unity仍然可以单独剔除网格</strong>，但每次绘制调用占用的资源较少，因为数据状态永远不会改变。（减少DrawCall）</li>
+<li>Dynamic Batching :
+在CPU动态上转换网格顶点，将相同配置的顶点分组，并在一次绘制调用中渲染它们。
+比如顶点存储相同数量和类型的属性，则它们共享相同的配置。例如，位置和法线。
+（减少DrawCall）</li>
+<li>Manually combining meshes :
+通过调用Mesh.CombineMeshes函数将多个Mesh合并为一个。
+（减少DrawCall）</li>
+<li>GPU Instancing : 渲染相同的mesh多次。GPU
+实例化对于绘制在场景中多次出现的几何图形非常有用，例如树木或灌木丛。（减少DrawCall）</li>
+<li>SRP Batcher : 在SRP项目中，可以使用SRP
+Batcher减少相同着色器变体的材质准备和绘制调用所需的CPU时间。
+（不减少DrawCall，减少状态改变次数）</li>
+</ul>
+<p>您可以在同一场景中使用多个绘制调用优化方法，但请注意，Unity会按特定顺序对绘制调用优化方法进行优先排序。如果您将一个游戏对象标记为使用多种绘制调用优化方法，Unity将使用优先级最高的方法。唯一的例外是SRP
+Batcher。当您使用SRP Batcher时，Unity还支持对与SRP
+Batcher兼容的游戏对象进行静态批处理。 Unity
+按以下顺序对绘制调用优化进行优先排序：</p>
+<ol type="1">
+<li>SRP Batcher and Static batching</li>
+<li>GPU Instancing</li>
+<li>Dynamic Batching</li>
+</ol>
+<p>如果您将GameObject标记为静态批处理并且Unity成功对其进行了批处理，Unity会禁用该GameObject的GPU实例化，即使渲染器使用实例化着色器也是如此。发生这种情况时，Inspector
+窗口显示一条警告消息，建议您禁用静态批处理。
+同样，如果Unity可以对网格使用GPU实例化，Unity会禁用该网格的动态批处理。</p>
+<a id="more"></a>
+<h1 id="合并mesh减少drawcall">合并Mesh减少DrawCall</h1>
+<p>将多个Mesh合并成一个提交给GPU,以减少DrawCall的调用，Unity提供了三种方式：Static
+Batching（静态批处理），Dynamic Batching（动态批处理）和Manually
+combining
+meshes(手动合并Mesh)API。与手动合并Mesh相比，Unity的内置绘图调用批处理有几个优点；
+最值得注意的是，Unity仍然可以单独剔除网格。 但是，它也有一些缺点；
+静态批处理会产生内存和存储开销，而动态批处理会产生一些CPU开销。</p>
+<p>在内置渲染管线中，您可以使用MaterialPropertyBlock更改材质属性，不会中断绘制调用批处理。CPU仍需要进行一些渲染状态更改，但使用MaterialPropertyBlock比使用多种材质更快。如果您的项目使用SRP，请不要使用，MaterialPropertyBlock因为它们删除了材质的SRP
+Batcher兼容性。</p>
+<p>透明着色器通常需要Unity以从后到前的顺序渲染网格。为了批量处理透明网格，Unity首先将它们从后向前排序，然后尝试对它们进行批量处理。由于Unity必须从后到前渲染网格，因此它通常无法批量处理与不透明网格一样多的透明网格。</p>
+<p>Unity无法将动态批处理应用于包含镜像的游戏对象.
+例如，如果一个GameObject的Scale为1而另一个GameObject的Scale为–1，Unity无法将它们批处理在一起。</p>
+<p>如果您不能使用绘图调用批处理，手动组合彼此靠近的网格可能是一个不错的选择。</p>
+<p>警告：<strong>当您从C#脚本访问共享材质属性时，请确保使用Renderer.sharedMaterial而不是Renderer.material。Renderer.material创建材质的副本并将副本分配回渲染器。这会阻止Unity为该渲染器批处理绘制调用。</strong></p>
+<h2 id="static-batching">Static Batching</h2>
+<p>静态批处理是将不移动对象的Mesh合并以达到减少DrawCall的目的，它将合并的Mesh转换为世界空间，并为它们构建一个共享的顶点和索引缓冲区。
+然后，对于可见网格，Unity执行一系列简单的绘制调用，每个调用之间几乎没有状态变化。
+静态批处理不会减少绘制调用的次数（实测是能减少绘制调用的，这取决于摄像机观察到的对象顶点，在共享的顶点缓冲区中是否连续），而是减少它们之间渲染状态更改的次数。</p>
+<p><strong>不连续时的DrawCall情况</strong></p>
+<figure>
+<img src="/images/unity/batching/static_no_continue.png"
+alt="不连续时的绘制情况" />
+<figcaption aria-hidden="true">不连续时的绘制情况</figcaption>
+</figure>
+<p>从上图中，可以看出在顶点不连续的情况下是通过两个DrawCall来绘制的，第一个从Index
+108开是绘制了一个Cube，第二个从0开始绘制了一个Cube。</p>
+<p><strong>连续时的DrawCall情况</strong></p>
+<figure>
+<img src="/images/unity/batching/static_continue.png"
+alt="连续时的DrawCall情况" />
+<figcaption aria-hidden="true">连续时的DrawCall情况</figcaption>
+</figure>
+<p>从上图中，可以看出在顶点连续的情况下只需要一个DrawCall就可以把所有的Cube绘制完成。</p>
+<h3 id="如何使用静态批处理">如何使用静态批处理</h3>
+<p>Unity可以在构建时和运行时执行静态批处理。
+作为一般规则，如果游戏对象存在于场景中在构建应用程序之前，使用编辑器在构建时批处理游戏对象。
+如果您在运行时创建游戏对象及其网格，则需要使用用运行时API。使用运行时
+API时，您可以更改静态批处理根的对象的Transform属性。
+这意味着您可以移动、旋转或缩放构成静态批次的整个网格组合。
+您不能更改单个网格的Transform属性。
+要对一组游戏对象使用静态批处理，游戏对象必须符合静态批处理的条件。
+除了常见使用信息中描述的标准外，请确保：</p>
+<ul>
+<li>游戏对象处于活动状态。</li>
+<li>GameObject 有一个 Mesh Filter组件，并且该组件已启用。</li>
+<li>Mesh Filter 组件引用了 Mesh。</li>
+<li>网格已启用读/写。</li>
+<li>网格的顶点数大于 0。</li>
+<li>该网格尚未与另一个网格组合。</li>
+<li>游戏对象有一个MeshRender组件，并且该组件已启用。</li>
+<li>MeshRenderer组件不使用带有DisableBatching标记设置为true的着色器材质</li>
+<li>要一起批处理的网格必须使用相同的顶点属性。
+例如，可以将使用顶点位置、顶点法线和一个UV的网格相互批处理，但不能与使用顶点位置、顶点法线、UV0、UV1和顶点切线的网格进行批处理。</li>
+</ul>
+<p>在构建时使用静态批处理，需要在Edit &gt; Project Settings &gt;
+Player-&gt;Other Settings中启用Static Batching,
+并在场景中，将需要批处理的对象勾上Batching Static。
+在运行时，可以使用StaticBatchingUtility.Combine函数进行静态批处理，跟直接使用建模工具合并不同，静态批处理的对象能够执行单独的相机剔除。</p>
+<p><strong>注意：</strong> -
+使用静态批处理需要额外的CPU内存来存储组合的几何图形。
+如果多个游戏对象使用相同的网格，Unity会为每个游戏对象创建一个网格副本，并将每个副本插入到组合网格中。这意味着相同的几何体多次出现在组合网格中。无论您是使用编辑器还是运行时API为静态批处理准备游戏对象，Unity都会这样做。如果您想保持较小的内存占用，您可能不得不牺牲渲染性能并避免对某些游戏对象进行静态批处理。
+例如，在茂密的森林环境中将树标记为静态会对内存产生严重影响。 -
+静态批次可以包含的顶点数量是有限制的。每个静态批次最多可包含64000个顶点。
+如果有更多，Unity会创建另一个批次。</p>
+<h2 id="dynamic-batching">Dynamic Batching</h2>
+<p>动态批处理是一种绘制调用批处理方法，可对移动的GameObjects进行批处理减少绘制调用。Unity在运行时动态生成的网格和几何体之间的工作方式不同，例如粒子系统。
+动态批处理网格和动态几何之体间的内部差异如下：</p>
+<p><strong>动态批处理网格</strong></p>
+<p>网格的动态批处理通过将所有顶点转换为世界空间来工作。在CPU上，而不是在GPU上。这意味着动态批处理只是一种优化，前提是转换工作比绘制调用占用更少的资源。绘制调用的资源需求取决于许多因素，主要是图形API。
+例如，在控制台或Apple
+Metal等现代API上，绘制调用开销通常要低得多，而且动态批处理通常不会产生性能提升。要确定在您的应用程序中使用动态批处理是否有益，需要分析使用和不使用动态批处理的应用程序。Unity可以对阴影投射者使用动态批处理，即使它们的材质不同，只要Unity需要的阴影传递的材质值相同即可。
+例如，多个板条箱可以使用具有不同纹理的材质。
+尽管材质资产不同，但这些差异与阴影投射Pass无关，Unity可以在阴影渲染步骤为GameObjects批处理阴影。</p>
+<p>动态批处理的一些限制：</p>
+<ul>
+<li>Unity无法将动态批处理应用于包含超过900个顶点属性和225个顶点的网格。
+这是因为网格的动态批处理具有每个顶点的开销。例如，如果您的着色器使用顶点位置、顶点法线和单个UV，那么Unity最多可以批处理225个顶点。但是，如果您的着色器使用顶点位置、顶点法线、UV0、UV1
+和顶点切线，那么Unity只能批处理180个顶点。(说明：在Unity2021.3.6f中限制实际要大很多，内建管线：三个属性的情况4000多个顶点为一个批次，URP中三个属性的情况7000多个顶点为一个批次)</li>
+<li>如果GameObjects使用不同的材质实例，Unity无法将它们批处理在一起，即使它们本质上相同。唯一的例外是阴影投射渲染。</li>
+<li>具有光照贴图的游戏对象具有额外的渲染器参数。这意味着，如果您想批量处理光照贴图游戏对象，它们必须指向相同的光照贴图位置。</li>
+<li>Unity无法将动态批处理完全应用于使用多Pass着色器的游戏对象。</li>
+</ul>
+<p><strong>动态批处理动态产生的几何体</strong></p>
+<p>以下渲染器动态生成几何图形，例如粒子和线条，您可以使用动态批处理对其进行优化：
+- Built-in Particle Systems - Line Renderers - Trail Renderers</p>
+<p>动态生成的几何图形的动态批处理与网格的工作方式不同： 1.
+对于每个渲染器，Unity将所有可动态批处理的内容构建到一个大型顶点缓冲区中。
+2. 渲染器设置批次的材质状态。 3. 然后Unity将顶点缓冲区绑定到GPU。 4.
+对于批处理中的每个渲染器，Unity更新顶点缓冲区中的偏移量并提交新的绘制调用。</p>
+<h2 id="manually-combining-meshes手动合并mesh">Manually combining
+meshes(手动合并Mesh)</h2>
+<p>使用建模工具或其他的工具在外部进行Mesh的合并，但就不能像静态批处理一样具有单独相机剔除了，如果Mesh有一个角在屏幕内都会将全部的Mesh丢给渲染器渲染。</p>
+<h1 id="gpu-instancing">GPU Instancing</h1>
+<p>GPU实例化是一种绘制调用优化方法，可在一次绘制调用中使用相同的材质渲染网格的多个副本。网格的每个副本都称为一个实例。这对于绘制在场景中多次出现的事物很有用，例如，树木或灌木。GPU实例化在相同的绘制调用中渲染相同的网格。为了增加变化并减少重复的出现，每个实例都可以具有不同的属性，例如颜色或缩放。
+渲染多个实例的绘制调用在Frame Debugger中显示为Draw Mesh (instanced)。GPU
+Intancing与SRP Batcher不兼容。</p>
+<p>SRP Batcher优先于GPU Intancing。 如果是游戏对象与SRP
+Batcher兼容，则优先使用SRP批处理，而不是GPUIntancing。
+如果您的项目使用SRP批处理，并且您想将GPU
+Intancing用于GameObject，则可以执行以下操作之一：</p>
+<ul>
+<li>使用Graphics.DrawMeshinstance。
+该API绕过了GameObject的使用，并使用指定的参数直接在屏幕上绘制网格。</li>
+<li>手动删除SRP批处理兼容性。不把材质属性放在CBuffer中。</li>
+</ul>
+<h2 id="如何使用gpu实例化">如何使用GPU实例化</h2>
+<p>Unity使用GPU实例来共享相同网格和材质的游戏对象。 实例网格和材质：</p>
+<ul>
+<li><p>材质球的着色器必须支持GPU实例。
+Unity的标准着色器和所有表面着色器都支持GPU
+Instancing。要向任何其他着色器中添加GPU启动支持，请参阅创建支持GPU
+Intancing的着色器。</p></li>
+<li><p>网格必须来自以下来这几种方式：</p>
+<ul>
+<li>Meshrenderer组件或Graphics.Rendermesh调用。Unity将这些网格添加到列表中，然后检查以查看可以实例的网格。Unity不支持SkinnedMeshrenderers和兼容SRP
+Batcher的Meshrenderer的组件。</li>
+<li>Graphics.RenderMeshInstanced或Graphics.RenderMeshIndirect调用。
+这些方法使用相同的着色器多次渲染相同的网格。
+这些方法的每次调用都会触发单独的绘制调用。Unity不会合并这些调用。</li>
+</ul></li>
+</ul>
+<p>GPU Instancing支持Unity的烘焙全球照明系统。
+Unity标准着色器和表面着色器支持GPU Intancingb以及Unity的烘焙全球照明。
+每个GPU实例都支持以下来源之一的全局照明：</p>
+<ul>
+<li>任何数量的光照探针。</li>
+<li>一张光照图。<strong>注意：一个实例可以使用光照图中的多个区域。</strong></li>
+<li>一个光照探针代理（LPPV）组件。
+<strong>注意：您必须烘培包含所有实例的LPPV。</strong></li>
+</ul>
+<p><strong>使用GPU
+Intancing无法有效地处理具有较少顶点的网格，因为GPU无法以完全使用GPU资源的方式分发工作。
+这种处理效率低下可能对性能产生不利影响。
+效率低下的阈值取决于GPU，但作为一般规则，请不要将GPU
+Intancing用于少于256个顶点的网格。
+如果您想多次渲染具有较少顶点的网格，最好的做法是创建一个包含所有网格信息的单个缓冲区，并使用它来绘制网格。</strong></p>
+<h2 id="创建支持gpu-intancing的着色器">创建支持GPU
+Intancing的着色器</h2>
+<p>此节包含有关如何添加GPU
+Instancing到自定义Unity着色器中。首先说明自定义着色器支持GPU
+Instancing所需的着色器的关键字（keywords），变量(variables)和函数(function)。</p>
+<h3 id="着色器修改">着色器修改</h3>
+<p>本节包含有关着色器添加的信息，这些信息与GPU实例有关。</p>
+<ul>
+<li>#pragma multi_compile_instancing
+生成实例变体。这是片段和顶点着色器所需的。对于表面着色器是可选的。</li>
+<li>#pragma instancing_options 指定Unity用于实例的选项。
+有关可用选项开关的信息，请参见#Pragma Intancing_options。</li>
+<li>UNITY_VERTEX_INPUT_INSTANCE_ID
+在顶点着色器输入/输出结构中定义实例ID。
+要使用此宏，请启用INSTANCING_ON着色器关键字。
+否则，Unity无法设置实例ID。要访问实例ID，请在#IFDEF
+INSTANCING_ON块中使用vertexInput.instanceID。
+如果您不使用此块，则变体无法编译。</li>
+<li>UNITY_INSTANCING_BUFFER_START(bufferName)
+声明名为bufferName的每种固定常数缓冲区的开始。
+将此宏与UNITY_INSTANCING_BUFFER_END一起使用，以包装您想要在每个实例中唯一的属性的声明。
+使用UNITY_DEFINE_INSTANCED_PROP在缓冲区内声明属性。</li>
+<li>UNITY_INSTANCING_BUFFER_END(bufferName)
+声明名为bufferName的每种固定常数缓冲区的结束。
+将此宏与UNITY_INSTANCING_BUFFER_START一起使用，以包装您想要在每个实例中唯一的属性声明。
+使用UNITY_DEFINE_INSTANCED_PROP在缓冲区内声明属性。</li>
+<li>UNITY_DEFINE_INSTANCED_PROP(type, propertyName)
+用指定的类型和名称定义着色器属性。</li>
+<li>UNITY_SETUP_INSTANCE_ID(v); 允许着色器函数访问实例ID。
+对于顶点着色器，开始时需要此宏。 对于碎片着色器，此添加是可选的。</li>
+<li>UNITY_TRANSFER_INSTANCE_ID(v, o);
+将实例ID从输入结构复制到顶点着色器中的输出结构。
+如果您需要在片段着色器中访问每种实体数据，请使用此宏。</li>
+<li>UNITY_ACCESS_INSTANCED_PROP(bufferName, propertyName)
+在实例常量缓冲区中访问每个着色器属性。
+Unity使用实例ID去索引实例数据数组中的数据。
+bufferName必须匹配包含指定属性的常量缓冲区的名称。</li>
+</ul>
+<p>当您使用多个属性时，您无需在MaterialPropertyBlock对象中填充所有这些属性。
+另外，如果一个实例缺乏属性，Unity将从引用材质中的默认值。
+如果材质没有该属性的默认值，则Unity将值设置为0。不要放置一个非实例属性在MaterialPropertyBlock中，因为此操纵会禁用GPU实例化。
+相反的，为它们创建不同的材质。</p>
+<h3 id="instancing_options-开关">Instancing_options 开关</h3>
+<p>#pragma instancing_options 指令能使用下列的开关：</p>
+<ul>
+<li>forcemaxcount:batchSize和maxcount:batchSize
+在大多数平台上，Unity会自动计算实例化数据数组的大小。它将目标设备上的最大常量缓冲区大小除以包含所有实例属性的结构的大小。
+通常，您无需担心批量大小。
+但是，某些平台需要固定的数组大小。要为这些平台指定批次大小，请使用maxcount选项。
+其他平台忽略此选项。
+如果你想为所有平台强制一个批次大小，使用forcemaxcount。
+例如，当您的项目使用DrawMeshInstanced绘制带有256个实例化对象的绘制调用时，这很有用.
+这两个选项的默认值为500。</li>
+<li>assumeuniformscaling 指示Unity假定所有实例都具有统一的缩放（所有
+X、Y 和 Z 轴的缩放相同）。</li>
+<li>nolodfade 使Unity不将GPU实例化应用于LOD fade值。</li>
+<li>nolightprobe 防止Unity将GPU实例化应用到Light Probe值及其遮挡数据。
+如果您的项目不包含使用了GPU实例化和光照探针的对象，将此选项设置为ON可以提高性能。</li>
+<li>nolightmap 防止Unity将GPU实例化应用到光照图中值。
+如果您的项目不包含同时使用GPU实例化和光照贴图的游戏对象，则将此选项设置为ON可以提高性能。</li>
+<li>procedural:FunctionName
+生成用于Graphics.DrawMeshInstancedIndirect的附加变体。在顶点着色器阶段开始时，Unity调用冒号后指定的函数。
+手动设置实例数据，请将每个实例数据在此函数中添加。
+如果任何获取的实例属性包含在片段着色器中，Unity也会在片段着色器的开头调用此函数。</li>
+</ul>
+<h3
+id="将实例属性添加到gpu实例化着色器">将实例属性添加到GPU实例化着色器</h3>
+<p>默认情况下，Unity GPU实例化在每个绘制调用中具有不同Transform信息。
+要为实例添加更多变化，请修改着色器以添加每个实例的属性，例如颜色。
+您可以在表面着色器和顶点/片段着色器中执行此操作。
+自定义着色器不需要每个实例数据，但它们确实需要一个实例ID，因为世界矩阵需要一个实例ID才能正常运行。
+表面着色器会自动设置实例ID，但自定义顶点和片段着色器不会。
+要为自定义顶点和片段着色器设置ID，请在着色器的开头使用UNITY_SETUP_INSTANCE_ID。
+有关如何执行此操作的示例，请参阅下方的“顶点和片段着色器”。
+当您声明一个实例化属性时，Unity会将GameObjects上设置的MaterialPropertyBlock对象的所有属性值收集到单个绘制调用中。
+有关如何使用MaterialPropertyBlock设置对象在运行时每个实例数据，请参阅下方的“在运行时改变每个实例数据”。</p>
+<p><strong>顶点和片段着色器：</strong> <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></td><td class="code"><pre><span class="line">Shader &quot;Unlit&#x2F;GPUInstancing&quot;</span><br><span class="line">&#123;</span><br><span class="line">    Properties</span><br><span class="line">    &#123;</span><br><span class="line">        _MainTex (&quot;Texture&quot;, 2D) &#x3D; &quot;white&quot; &#123;&#125;</span><br><span class="line">        _Color (&quot;Color&quot;, Color) &#x3D; (1, 1, 1, 1)</span><br><span class="line">        _ExtSize (&quot;ExtSize&quot;, float) &#x3D; 0</span><br><span class="line">    &#125;</span><br><span class="line">    SubShader</span><br><span class="line">    &#123;</span><br><span class="line">        Tags &#123; &quot;RenderType&quot;&#x3D;&quot;Opaque&quot; &quot;RenderPipeline&quot;&#x3D;&quot;UniversalPipeline&quot;&#125;</span><br><span class="line"></span><br><span class="line">        Pass</span><br><span class="line">        &#123;</span><br><span class="line">            Tags &#123;&quot;LightMode&quot; &#x3D; &quot;UniversalForward&quot;&#125;</span><br><span class="line">            </span><br><span class="line">            HLSLPROGRAM</span><br><span class="line">            #pragma vertex vert</span><br><span class="line">            #pragma fragment frag</span><br><span class="line">            #pragma multi_compile_instancing</span><br><span class="line">            </span><br><span class="line">            #include &quot;Packages&#x2F;com.unity.render-pipelines.universal&#x2F;ShaderLibrary&#x2F;Core.hlsl&quot;</span><br><span class="line"></span><br><span class="line">            struct Attributes</span><br><span class="line">            &#123;</span><br><span class="line">                float4 positionOS : POSITION;</span><br><span class="line">                float3 normalOS : NORMAL;</span><br><span class="line">                float2 uv : TEXCOORD0;</span><br><span class="line">                UNITY_VERTEX_INPUT_INSTANCE_ID</span><br><span class="line">            &#125;;</span><br><span class="line"></span><br><span class="line">            struct Varyings</span><br><span class="line">            &#123;</span><br><span class="line">                float4 positionCS : SV_POSITION;</span><br><span class="line">                float2 uv : TEXCOORD0;</span><br><span class="line">                UNITY_VERTEX_INPUT_INSTANCE_ID</span><br><span class="line">            &#125;;</span><br><span class="line"></span><br><span class="line">            sampler2D _MainTex;</span><br><span class="line">            float4 _MainTex_ST;</span><br><span class="line">            </span><br><span class="line">            UNITY_INSTANCING_BUFFER_START(Test)</span><br><span class="line">            UNITY_DEFINE_INSTANCED_PROP(float4, _Color)</span><br><span class="line">            UNITY_DEFINE_INSTANCED_PROP(float, _ExtSize)</span><br><span class="line">            UNITY_INSTANCING_BUFFER_END(Test)</span><br><span class="line"></span><br><span class="line">            Varyings vert (Attributes input)</span><br><span class="line">            &#123;</span><br><span class="line">                Varyings o;</span><br><span class="line">                UNITY_SETUP_INSTANCE_ID(input);</span><br><span class="line">                UNITY_TRANSFER_INSTANCE_ID(input, o);</span><br><span class="line">                float3 positionOS &#x3D; input.positionOS.xyz + input.normalOS * UNITY_ACCESS_INSTANCED_PROP(Test, _ExtSize);</span><br><span class="line">                o.positionCS &#x3D; TransformObjectToHClip(positionOS);</span><br><span class="line">                o.uv &#x3D; TRANSFORM_TEX(input.uv, _MainTex);</span><br><span class="line">                return o;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            half4 frag (Varyings input) : SV_Target</span><br><span class="line">            &#123;</span><br><span class="line">                UNITY_SETUP_INSTANCE_ID(input);</span><br><span class="line">                float4 col &#x3D;  UNITY_ACCESS_INSTANCED_PROP(Test, _Color);</span><br><span class="line">                float4 mainCol &#x3D; tex2D(_MainTex, input.uv);</span><br><span class="line">                return mainCol * col;</span><br><span class="line">            &#125;</span><br><span class="line">            ENDHLSL</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p><strong>在运行时改变每个实例数据</strong></p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">using</span> UnityEngine;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">GPUInstanceTest</span> : <span class="title">MonoBehaviour</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">Start</span>(<span class="params"></span>)</span></span><br><span class="line"><span class="function"></span>    &#123;</span><br><span class="line">        MaterialPropertyBlock props = <span class="keyword">new</span> MaterialPropertyBlock();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; transform.childCount; i++)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">var</span> mr = transform.GetChild(i).GetComponent&lt;MeshRenderer&gt;();</span><br><span class="line">            props.SetColor(<span class="string">"_Color"</span>, <span class="keyword">new</span> Color(Random.Range(<span class="number">0.0f</span>, <span class="number">1.0f</span>), Random.Range(<span class="number">0.0f</span>, <span class="number">1.0f</span>), Random.Range(<span class="number">0.0f</span>, <span class="number">1.0f</span>), <span class="number">1.0f</span>));</span><br><span class="line">            props.SetFloat(<span class="string">"_ExtSize"</span>, Random.Range(<span class="number">0.0001f</span>, <span class="number">0.0001f</span>));</span><br><span class="line">            mr.SetPropertyBlock(props); <span class="comment">// 必须要每次设置一下</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="srp-batcher">SRP Batcher</h1>
+<p>可编程渲染管线(SRP)
+Batcher是一种绘制调用优化，可显着提高使用SRP的应用程序的性能。 SRP
+Batcher减少了Unity为使用相同着色器变体的材质准备和调度绘制调用所需的CPU时间。</p>
+<h2 id="需求和兼容性">需求和兼容性</h2>
+<h3 id="gameobject兼容性">GameObject兼容性</h3>
+<p>在任何给定的场景中, 一些游戏对象与SRP
+Batcher兼容，有些则不兼容。兼容的游戏对象使用SRP
+Batcher代码路径，不兼容的游戏对象使用标准的SRP代码路径。
+有关详细信息，请参阅后续章节的“SRP Batcher的工作原理”。</p>
+<p>GameObject必须满足以下要求才能与SRP Batcher代码路径兼容：</p>
+<ul>
+<li>GameObject必须包含网格或蒙皮网格。 它不能是一个粒子。</li>
+<li>GameObject不得使用 MaterialPropertyBlocks。</li>
+<li>GameObject使用的着色器必须与SRP Batcher兼容。
+有关详细信息，请参阅后续章节的“着色器兼容性”。</li>
+</ul>
+<h3 id="着色器兼容性">着色器兼容性</h3>
+<p>高清渲染管线 (HDRP)
+和通用渲染管线(URP)中的所有带光照和不带光照的着色器都符合此要求（除粒子版本）。
+对于与SRP Batcher兼容的自定义着色器，它必须满足以下要求：</p>
+<ul>
+<li>着色器必须在名为UnityPerDraw的单个常量缓冲区中声明所有内置引擎属性。
+例如，unity_ObjectToWorld或unity_SHAr。</li>
+<li>着色器必须在名为UnityPerMaterial的单个常量缓冲区中声明所有材质属性。</li>
+</ul>
+<h2 id="srp-batcher的工作原理">SRP Batcher的工作原理</h2>
+<p>优化绘制调用的传统方法是减少它们的数量。 相反，SRP
+Batcher减少了绘制调用之间的渲染状态更改。 为此，SRP
+Batcher结合了一系列绑定和绘制GPU命令。
+每个命令序列称为一个SRP批处理。</p>
+<figure>
+<img src="/images/unity/batching/SROShaderPass.png" alt="SetPass区别" />
+<figcaption aria-hidden="true">SetPass区别</figcaption>
+</figure>
+<p>为实现渲染的最佳性能，每个SRP Batcher应包含尽可能多的绑定和绘制命令。
+为此，请使用尽可能少的着色器变体。
+您仍然可以根据需要使用具有相同着色器的任意多种不同材质。
+当Unity在渲染循环中检测到新材质时，CPU会收集所有属性并将它们绑定到GPU的常量缓冲区中。
+GPU缓冲区的数量取决于着色器如何声明其常量缓冲区。</p>
+<p>SRP Batcher是一个底层的渲染循环，可使材质数据持久保存在GPU内存中。
+如果材质内容没有改变，SRP Batcher不会改变任何渲染状态。 相反，SRP
+Batcher使用专用代码路径来更新大型GPU缓冲区中的Unity引擎属性，如下所示：</p>
+<figure>
+<img src="/images/unity/batching/SRP_Batcher_loop.png"
+alt="SRP Batcher如何更新Buffer" />
+<figcaption aria-hidden="true">SRP Batcher如何更新Buffer</figcaption>
+</figure>
+<p>在这里，CPU只处理Unity引擎属性，在上图中标记为 Per Object large
+buffer。
+所有材质都有位于GPU内存中的持久常量缓冲区，随时可以使用。这会加快渲染速度，因为：</p>
+<ul>
+<li>所有材质内容现在都保存在GPU内存中。</li>
+<li>专用代码为每个对象的所有属性管理一个大型的GPU常量缓冲区。</li>
+</ul>
+<h2 id="故意删除gameobjects的srp-batcher兼容性">故意删除GameObjects的SRP
+Batcher兼容性</h2>
+<p>在极少数情况下，您可能希望故意使特定游戏对象与SRP Batcher不兼容。
+例如，如果您想使用与SRP Batcher不兼容的GPU实例化。
+如果您想使用完全相同的材质渲染许多相同的网格，GPU实例化可能比SRP
+Batcher更高效。 要使用GPU实例化，您必须：</p>
+<ul>
+<li>使用 Graphics.DrawMeshInstanced。</li>
+<li>手动删除SRP Batcher兼容性并为材质启用GPU实例化。</li>
+</ul>
+<p>有两种方法可以从GameObject中删除与SRP Batcher的兼容性：</p>
+<ul>
+<li>使着色器不兼容。</li>
+<li>使渲染器不兼容。</li>
+</ul>
+<p>提示：如果您使用GPU实例化而不是SRP Batcher，请使用
+Profiler以确保GPU实例化对于您的应用程序比SRP Batcher更有效。</p>
+<h3 id="删除着色器兼容性">删除着色器兼容性</h3>
+<p>您可以使手写着色器和Shader Graph着色器与SRP Batcher不兼容。
+但是，对于Shader Graph着色器，如果您经常更改和重新编译Shader
+Graph，则使渲染器不兼容会更简单。 要使Unity着色器与SRP
+Batcher不兼容，您需要更改着色器源文件：</p>
+<ul>
+<li>对于自定义着色器，打开着色器源文件。 对于Shader
+Graph着色器，将Shader
+Graph的已编译着色器源代码复制到新的着色器源文件中。
+在您的应用程序中使用新的着色器源文件而不是着色器图。</li>
+<li>将新的材质属性声明添加到着色器的属性块中。
+不要在UnityPerMaterial常量缓冲区中声明新的材质属性。</li>
+</ul>
+<p>材质属性不需要做任何事情；只需要将其放在UnityPerMaterial常量缓冲区外部，则可以使着色器与SRP
+Batcher不兼容。</p>
+<p>警告：如果使用 Shader Graph，请注意每次编辑和重新编译 Shader Graph
+时，都必须重复此过程。</p>
+<h3 id="删除渲染器兼容性">删除渲染器兼容性</h3>
+<p>可以将MaterialPropertyBlock添加到渲染器，一旦渲染器中添加了MaterialPropertyBlock则不能SRP
+Batcher兼容。</p>
+<h2 id="srp-batcher着色器示例">SRP Batcher着色器示例</h2>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line">Shader &quot;Unlit&#x2F;SRPBatcher&quot;</span><br><span class="line">&#123;</span><br><span class="line">    Properties</span><br><span class="line">    &#123;</span><br><span class="line">        _MainTex (&quot;Texture&quot;, 2D) &#x3D; &quot;white&quot; &#123;&#125;</span><br><span class="line">        _Color (&quot;Color&quot;, Color) &#x3D; (1, 1, 1, 1)</span><br><span class="line">        _ExtSize (&quot;ExtSize&quot;, float) &#x3D; 0</span><br><span class="line">    &#125;</span><br><span class="line">    SubShader</span><br><span class="line">    &#123;</span><br><span class="line">        Tags &#123; &quot;RenderType&quot;&#x3D;&quot;Opaque&quot; &quot;RenderPipeline&quot;&#x3D;&quot;UniversalPipeline&quot;&#125;</span><br><span class="line"></span><br><span class="line">        Pass</span><br><span class="line">        &#123;</span><br><span class="line">            Tags &#123;&quot;LightMode&quot; &#x3D; &quot;UniversalForward&quot;&#125;</span><br><span class="line">            </span><br><span class="line">            HLSLPROGRAM</span><br><span class="line">            #pragma vertex vert</span><br><span class="line">            #pragma fragment frag</span><br><span class="line">            </span><br><span class="line">            #include &quot;Packages&#x2F;com.unity.render-pipelines.universal&#x2F;ShaderLibrary&#x2F;Core.hlsl&quot;</span><br><span class="line"></span><br><span class="line">            struct Attributes</span><br><span class="line">            &#123;</span><br><span class="line">                float4 positionOS : POSITION;</span><br><span class="line">                float3 normalOS : NORMAL;</span><br><span class="line">                float2 uv : TEXCOORD0;</span><br><span class="line">            &#125;;</span><br><span class="line"></span><br><span class="line">            struct Varyings</span><br><span class="line">            &#123;</span><br><span class="line">                float4 positionCS : SV_POSITION;</span><br><span class="line">                float2 uv : TEXCOORD0;</span><br><span class="line">            &#125;;</span><br><span class="line"></span><br><span class="line">            sampler2D _MainTex;</span><br><span class="line">            </span><br><span class="line">            CBUFFER_START(UnityPerMaterial)</span><br><span class="line">            float4 _Color;</span><br><span class="line">            float _ExtSize;</span><br><span class="line">            float4 _MainTex_ST;</span><br><span class="line">            CBUFFER_END</span><br><span class="line"></span><br><span class="line">            Varyings vert (Attributes input)</span><br><span class="line">            &#123;</span><br><span class="line">                Varyings o;</span><br><span class="line">                float3 positionOS &#x3D; input.positionOS.xyz + input.normalOS * _ExtSize;</span><br><span class="line">                o.positionCS &#x3D; TransformObjectToHClip(positionOS);</span><br><span class="line">                o.uv &#x3D; TRANSFORM_TEX(input.uv, _MainTex);</span><br><span class="line">                return o;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            half4 frag (Varyings input) : SV_Target</span><br><span class="line">            &#123;</span><br><span class="line">                float4 mainCol &#x3D; tex2D(_MainTex, input.uv);</span><br><span class="line">                return mainCol * _Color;</span><br><span class="line">            &#125;</span><br><span class="line">            ENDHLSL</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>说明：以上的测试结果是基于Unity
+2021.3.6f1，每个版本的测试的结果可能会不一样。</strong></p>
+<p><a
+href="https://docs.unity3d.com/Manual/graphics-performance-profiling.html">官方文档</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/Batching/" rel="tag"><i class="fa fa-tag"></i> Batching</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2022/10/06/Unity/Graphics/URP%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB-%E5%BA%94%E7%94%A8%E9%98%B6%E6%AE%B5/" rel="next" title="URP源码阅读-应用阶段">
+                  <i class="fa fa-chevron-left"></i> URP源码阅读-应用阶段
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/04/02/Unity/Graphics/Photoshop%E5%9B%BE%E5%B1%82%E6%B7%B7%E5%90%88/" rel="prev" title="Photoshop图层混合">
+                  Photoshop图层混合 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#合并mesh减少drawcall"><span class="nav-number">1.</span> <span class="nav-text">合并Mesh减少DrawCall</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#static-batching"><span class="nav-number">1.1.</span> <span class="nav-text">Static Batching</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#如何使用静态批处理"><span class="nav-number">1.1.1.</span> <span class="nav-text">如何使用静态批处理</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#dynamic-batching"><span class="nav-number">1.2.</span> <span class="nav-text">Dynamic Batching</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#manually-combining-meshes手动合并mesh"><span class="nav-number">1.3.</span> <span class="nav-text">Manually combining
+meshes(手动合并Mesh)</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#gpu-instancing"><span class="nav-number">2.</span> <span class="nav-text">GPU Instancing</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#如何使用gpu实例化"><span class="nav-number">2.1.</span> <span class="nav-text">如何使用GPU实例化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建支持gpu-intancing的着色器"><span class="nav-number">2.2.</span> <span class="nav-text">创建支持GPU
+Intancing的着色器</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#着色器修改"><span class="nav-number">2.2.1.</span> <span class="nav-text">着色器修改</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#instancing_options-开关"><span class="nav-number">2.2.2.</span> <span class="nav-text">Instancing_options 开关</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#将实例属性添加到gpu实例化着色器"><span class="nav-number">2.2.3.</span> <span class="nav-text">将实例属性添加到GPU实例化着色器</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#srp-batcher"><span class="nav-number">3.</span> <span class="nav-text">SRP Batcher</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#需求和兼容性"><span class="nav-number">3.1.</span> <span class="nav-text">需求和兼容性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#gameobject兼容性"><span class="nav-number">3.1.1.</span> <span class="nav-text">GameObject兼容性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#着色器兼容性"><span class="nav-number">3.1.2.</span> <span class="nav-text">着色器兼容性</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#srp-batcher的工作原理"><span class="nav-number">3.2.</span> <span class="nav-text">SRP Batcher的工作原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#故意删除gameobjects的srp-batcher兼容性"><span class="nav-number">3.3.</span> <span class="nav-text">故意删除GameObjects的SRP
+Batcher兼容性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#删除着色器兼容性"><span class="nav-number">3.3.1.</span> <span class="nav-text">删除着色器兼容性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#删除渲染器兼容性"><span class="nav-number">3.3.2.</span> <span class="nav-text">删除渲染器兼容性</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#srp-batcher着色器示例"><span class="nav-number">3.4.</span> <span class="nav-text">SRP Batcher着色器示例</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <img class="site-author-image" itemprop="image" alt="张卫"
+    src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">张卫</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">31</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/zw514159799" title="CSDN &amp;rarr; https:&#x2F;&#x2F;blog.csdn.net&#x2F;zw514159799" rel="noopener" target="_blank"><i class="fa fa-fw fa-csdn"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://github.com/Divad1111?tab=repositories" title="GitHub &amp;rarr; https:&#x2F;&#x2F;github.com&#x2F;Divad1111?tab&#x3D;repositories" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.cnblogs.com/qilezaitu" title="博客园 &amp;rarr; https:&#x2F;&#x2F;www.cnblogs.com&#x2F;qilezaitu" rel="noopener" target="_blank"><i class="fa fa-fw fa-cnblogs"></i>博客园</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://baidu.com/" title="https:&#x2F;&#x2F;baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://bing.com/" title="https:&#x2F;&#x2F;bing.com" rel="noopener" target="_blank">Bing</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2019 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">张卫</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-area-chart"></i>
+    </span>
+      <span class="post-meta-item-text">站点总字数：</span>
+    <span title="站点总字数">542k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">8:13</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.1
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.5.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

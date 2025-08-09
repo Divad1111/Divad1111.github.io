@@ -1,0 +1,1834 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="闪存优化 闪存用于存储游戏数据和资源，包括游戏数据、纹理、音频等。闪存的读写速度比内存慢得多，因此在游戏中，我们需要尽可能地减少闪存的读写次数，以提高游戏的性能。 闪存结构和文件操作流程 在性能优化-基础 中，介绍了相关的基础知识，为了文章的完整性，简单回顾一下。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="性能优化-CPU">
+<meta property="og:url" content="http://yoursite.com/2024/10/26/Unity/Optimization/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96-CPU/index.html">
+<meta property="og:site_name" content="张卫的博客">
+<meta property="og:description" content="闪存优化 闪存用于存储游戏数据和资源，包括游戏数据、纹理、音频等。闪存的读写速度比内存慢得多，因此在游戏中，我们需要尽可能地减少闪存的读写次数，以提高游戏的性能。 闪存结构和文件操作流程 在性能优化-基础 中，介绍了相关的基础知识，为了文章的完整性，简单回顾一下。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-10-26T04:09:28.000Z">
+<meta property="article:modified_time" content="2025-07-21T14:04:53.737Z">
+<meta property="article:author" content="张卫">
+<meta property="article:tag" content="优化">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://yoursite.com/2024/10/26/Unity/Optimization/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96-CPU/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>性能优化-CPU | 张卫的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">张卫的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">Done is better than perfect</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2024/10/26/Unity/Optimization/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96-CPU/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          性能优化-CPU
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2024-10-26 12:09:28" itemprop="dateCreated datePublished" datetime="2024-10-26T12:09:28+08:00">2024-10-26</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2025-07-21 22:04:53" itemprop="dateModified" datetime="2025-07-21T22:04:53+08:00">2025-07-21</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Unity/" itemprop="url" rel="index">
+                    <span itemprop="name">Unity</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="闪存优化">闪存优化</h1>
+<p>闪存用于存储游戏数据和资源，包括游戏数据、纹理、音频等。闪存的读写速度比内存慢得多，因此在游戏中，我们需要尽可能地减少闪存的读写次数，以提高游戏的性能。</p>
+<h2 id="闪存结构和文件操作流程">闪存结构和文件操作流程</h2>
+<p>在<a
+href="https://www.zhangwei.press/2024/04/24/Unity/Optimization/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96-%E5%9F%BA%E7%A1%80/">性能优化-基础</a>
+中，介绍了相关的基础知识，为了文章的完整性，简单回顾一下。</p>
+<a id="more"></a>
+<ol type="1">
+<li>闪存结构</li>
+</ol>
+<ul>
+<li>SOC系统中的闪存一般采用NAND Flash或NOR
+Flash，作为非易失性存储器，用于存储操作系统、应用程序、资源文件等。</li>
+<li>闪存通过总线（如SPI、eMMC、UFS等）与SOC主控芯片连接。</li>
+</ul>
+<ol start="2" type="1">
+<li>文件读写流程</li>
+</ol>
+<ul>
+<li><p><strong>文件读取：</strong></p>
+<ol type="1">
+<li>CPU发起文件读取请求，操作系统通过文件系统（如FAT、EXT4等）定位文件在闪存中的物理地址。</li>
+<li>文件系统驱动将读取命令通过总线发送到闪存控制器。</li>
+<li>闪存控制器根据地址从闪存芯片中读取数据，经过总线传输到SOC的内存（RAM）中。</li>
+<li>CPU从内存中获取数据进行处理。</li>
+</ol></li>
+<li><p><strong>文件写入：</strong></p>
+<ol type="1">
+<li>CPU将需要写入的数据放入内存缓冲区。</li>
+<li>操作系统通过文件系统分配闪存空间，并生成写入命令。</li>
+<li>写入命令和数据通过总线传递给闪存控制器。</li>
+<li>闪存控制器将数据写入指定的闪存地址。</li>
+<li>写入完成后，文件系统更新元数据，保证数据一致性。</li>
+</ol></li>
+<li><p><strong>应用层API：</strong></p>
+<ol type="1">
+<li>fopen, fread, fwrite,
+fclose等函数封装了文件操作的底层细节，但最终都是调用到操作系统API。</li>
+<li>也可以使用内存映射的方式，将文件映射到内存中，直接操作内存，避免了文件直接调用API读取的过程,
+映射后可以直接操作指针的方式读取和写入内存。</li>
+</ol></li>
+</ul>
+<h2 id="内存映射memory-mapping机制及其优势">内存映射（Memory
+Mapping）机制及其优势</h2>
+<p>内存映射是指将磁盘文件直接映射到虚拟内存空间，从而支持按需访问，避免整体加载：</p>
+<ul>
+<li><strong>传统 I/O 模式</strong>：调用 <code>Read()</code>
+一次性将整个文件加载至内存；内存占用高。</li>
+<li><strong>映射模式</strong>：调用 OS 提供的 <code>mmap()</code> 或
+<code>MapViewOfFile()</code>，按页访问数据；只有实际访问的数据才加载。</li>
+</ul>
+<p>优点包括：</p>
+<ul>
+<li><em>降低内存消耗，提升启动速度</em></li>
+<li><em>支持文件级懒加载和异步加载</em></li>
+<li><em>适合大型资源（如场景/AssetBundle）流式访问</em></li>
+</ul>
+<p>Unity 的 AssetBundle
+加载系统内部即使用此策略，在移动平台和主机平台中应用广泛。</p>
+<h2 id="序列化serialization">序列化（Serialization）</h2>
+<h3 id="序列化的概念">序列化的概念</h3>
+<p>Unity
+的序列化（Serialization）体系分为编辑器写盘阶段和运行时读盘阶段，它同时支持
+二进制格式（Binary SerializedFile）和
+文本（YAML）格式。编辑器在构建场景、AssetBundle
+或玩家（Player）时，将所有 UnityEngine.Object 派生的对象及其字段按照
+“Type Tree + 对象数据” 的方式写入磁盘；运行时则根据磁盘上的 Type Tree
+快速定位并重构内存中的 C++ 对象，并通过隐藏指针 m_CachedPtr
+将之挂载到对应的 C# 托管对象上。二进制格式在读写时采用专门的 C++
+引擎代码和内存拷贝技术，支持内存映射 (.resS/.resource)
+与多线程解压，是极高效的；而文本（YAML）格式则使用文本解析器和反射，仅在编辑器中针对小规模场景或开启
+“Force Text” 时使用</p>
+<h3 id="序列化数据结构">序列化数据结构</h3>
+<p>Unity 采用自定义的 TypeTree
+类型树机制进行资源的序列化与反序列化。其核心结构如下：</p>
+<h4 id="serializedfileheader">1. SerializedFileHeader</h4>
+<p>用于描述 <code>.assets</code> 文件的头部信息。</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title">SerializedFileHeader</span> &#123;</span><br><span class="line">    <span class="keyword">uint</span> metadataSize;</span><br><span class="line">    <span class="keyword">uint</span> fileSize;</span><br><span class="line">    <span class="keyword">uint</span> version;</span><br><span class="line">    <span class="keyword">uint</span> dataOffset;</span><br><span class="line">    <span class="keyword">byte</span> endianness;</span><br><span class="line">    <span class="keyword">byte</span>[] reserved;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>metadataSize</code>：元数据（TypeTree、ObjectInfo等）大小。</li>
+<li><code>fileSize</code>：整个资源文件的总大小（包括元数据和二进制数据）。</li>
+<li><code>version</code>：Unity版本序列化的版本，不是引擎版本（如
+<code>0x0D</code> 表示某个格式版本）。</li>
+<li><code>dataOffset</code>：实际资源（如贴图、音频等二进制数据）在文件中的偏移位置。</li>
+<li><code>endianness</code>：字节序标记（0 = 小端，1 = 大端）。</li>
+<li><code>reserved</code>：保留字段（通常为16字节，填0）。</li>
+</ul>
+<h4 id="serializedtype">2. SerializedType</h4>
+<p>描述一个类型信息，包括该类的ID、TypeTree结构等。</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title">SerializedType</span> &#123;</span><br><span class="line">    <span class="keyword">int</span> classID;</span><br><span class="line">    <span class="keyword">bool</span> isStrippedType;</span><br><span class="line">    <span class="keyword">short</span> scriptTypeIndex;</span><br><span class="line">    TypeTree typeTree;</span><br><span class="line">    <span class="keyword">string</span> scriptIDHash;</span><br><span class="line">    <span class="keyword">string</span> typeHash;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>classID</code>：Unity内部定义的类ID（如
+<code>1=GameObject</code>, <code>28=Texture2D</code>）。</li>
+<li><code>isStrippedType</code>：是否为裁剪类型（strip=True
+表示此类型已裁剪，仅保留元信息）。</li>
+<li><code>scriptTypeIndex</code>：脚本索引（用于 MonoBehavior /
+ScriptableObject 指向具体脚本）。</li>
+<li><code>typeTree</code>：该类型的字段结构树。</li>
+<li><code>scriptIDHash</code>：用于 MonoScript 类型的 GUID 哈希值。</li>
+<li><code>typeHash</code>：用于校验类型树是否匹配。</li>
+</ul>
+<h4 id="typetree">3. TypeTree</h4>
+<p>表示一个复杂类型的字段结构信息。</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title">TypeTree</span> &#123;</span><br><span class="line">    List&lt;TypeTreeNode&gt; nodes;</span><br><span class="line">    <span class="keyword">string</span> className;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>nodes</code>：字段树结构的节点数组（深度优先遍历展开）。</li>
+<li><code>className</code>：类型的名称（如 <code>MonoBehaviour</code>,
+<code>GameObject</code>）。</li>
+</ul>
+<h4 id="typetreenode">4. TypeTreeNode</h4>
+<p>字段节点的定义，描述一个字段的名称、类型及其在内存中的表现。</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title">TypeTreeNode</span> &#123;</span><br><span class="line">    <span class="keyword">string</span> type;</span><br><span class="line">    <span class="keyword">string</span> name;</span><br><span class="line">    <span class="keyword">int</span> byteSize;</span><br><span class="line">    <span class="keyword">int</span> index;</span><br><span class="line">    <span class="keyword">int</span> metaFlag;</span><br><span class="line">    <span class="keyword">int</span> version;</span><br><span class="line">    <span class="keyword">int</span> depth;</span><br><span class="line">    <span class="keyword">bool</span> isArray;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>type</code>：字段的类型名称（如 <code>int</code>,
+<code>float</code>, <code>Vector3</code>, <code>string</code>）。</li>
+<li><code>name</code>：字段名称。</li>
+<li><code>byteSize</code>：该字段在内存中的大小。</li>
+<li><code>index</code>：字段在TypeTree中的顺序索引。</li>
+<li><code>metaFlag</code>：元标志位（控制序列化行为，例如是否为Align16等）。</li>
+<li><code>version</code>：该字段引入的版本（可用于版本判断）。</li>
+<li><code>depth</code>：字段在嵌套结构中的深度（用于还原结构树）。</li>
+<li><code>isArray</code>：是否是数组类型字段。</li>
+</ul>
+<h4 id="objectinfo">5. ObjectInfo</h4>
+<p>表示 <code>.assets</code> 文件中的某个对象的基本信息。</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title">ObjectInfo</span> &#123;</span><br><span class="line">    <span class="keyword">long</span> byteStart;</span><br><span class="line">    <span class="keyword">int</span> byteSize;</span><br><span class="line">    <span class="keyword">int</span> typeID;</span><br><span class="line">    <span class="keyword">ushort</span> classID;</span><br><span class="line">    <span class="keyword">short</span> scriptTypeIndex;</span><br><span class="line">    <span class="keyword">ulong</span> pathID;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>byteStart</code>：该对象数据在文件中的偏移。</li>
+<li><code>byteSize</code>：数据块的大小。</li>
+<li><code>typeID</code>：序列化类型在类型表中的索引。</li>
+<li><code>classID</code>：类型的ClassID。</li>
+<li><code>scriptTypeIndex</code>：用于脚本类的索引。</li>
+<li><code>pathID</code>：唯一标识该对象的ID（可用于引用）。</li>
+</ul>
+<h4 id="localserializedobjectidentifier">6.
+LocalSerializedObjectIdentifier</h4>
+<p>描述某个对象在当前 <code>.assets</code> 文件中的引用信息。</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title">LocalSerializedObjectIdentifier</span> &#123;</span><br><span class="line">    <span class="keyword">long</span> localFileID;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>localFileID</code>：引用对象的 <code>pathID</code>。</li>
+</ul>
+<h4 id="fileidentifier">7. FileIdentifier</h4>
+<p>用于跨文件引用对象时的文件信息。</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title">FileIdentifier</span> &#123;</span><br><span class="line">    <span class="keyword">string</span> assetPath;</span><br><span class="line">    GUID assetGUID;</span><br><span class="line">    <span class="keyword">long</span> localFileID;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>assetPath</code>：引用文件的路径（在Editor中可显示）。</li>
+<li><code>assetGUID</code>：引用资源的GUID。</li>
+<li><code>localFileID</code>：在目标文件中的对象标识符（pathID）。</li>
+</ul>
+<p>这些结构一起组成了 Unity 序列化格式的核心结构。</p>
+<h4 id="serializedfile文件的结构">8. SerializedFile文件的结构</h4>
+<p>下图展示了SerializedFile文件的结构示意图。该结构遵循 Unity
+的序列化文件格式，一般用于
+<code>.assets</code>、<code>.sharedAssets</code>、<code>.bundle</code>
+中的资源文件：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">+-------------------------+</span><br><span class="line">| SerializedFileHeader   |</span><br><span class="line">+-------------------------+</span><br><span class="line">| Metadata Section        |</span><br><span class="line">|                         |</span><br><span class="line">| +---------------------+ |</span><br><span class="line">| | SerializedType[]    | |</span><br><span class="line">| |  - classID          | |</span><br><span class="line">| |  - typeTree         | |</span><br><span class="line">| |  - scriptTypeIndex  | |</span><br><span class="line">| +---------------------+ |</span><br><span class="line">|                         |</span><br><span class="line">| +---------------------+ |</span><br><span class="line">| | ObjectInfo[]        | |</span><br><span class="line">| |  - pathID           | |</span><br><span class="line">| |  - byteStart        | |</span><br><span class="line">| |  - byteSize         | |</span><br><span class="line">| +---------------------+ |</span><br><span class="line">|                         |</span><br><span class="line">| +---------------------+ |</span><br><span class="line">| | ScriptTypes (opt)   | |</span><br><span class="line">| +---------------------+ |</span><br><span class="line">|                         |</span><br><span class="line">| +---------------------+ |</span><br><span class="line">| | ExternalReferences  | |</span><br><span class="line">| | FileIdentifier[]    | |</span><br><span class="line">| | LocalSerialized...  | |</span><br><span class="line">| +---------------------+ |</span><br><span class="line">+-------------------------+</span><br><span class="line">| Data Section (binary)   |</span><br><span class="line">| Raw serialized objects  |</span><br><span class="line">| aligned &amp; typed         |</span><br><span class="line">+-------------------------+</span><br></pre></td></tr></table></figure>
+<ul>
+<li><p><strong>SerializedFileHeader</strong>：标记整个文件的版本、大小、数据偏移和字节序。</p></li>
+<li><p><strong>Metadata
+Section</strong>：所有类型信息、对象信息、引用信息等元数据。</p>
+<ul>
+<li><strong>SerializedType[]</strong>：包含该文件中所有用到的类型的结构（包括TypeTree）。</li>
+<li><strong>ObjectInfo[]</strong>：文件中所有对象的地址、大小、类型等信息。</li>
+<li><strong>ScriptTypes</strong>：如果有MonoBehavior等脚本资源，会引用脚本GUID等。</li>
+<li><strong>FileIdentifier[]</strong>：跨文件引用（external
+object）用的外部资源列表。</li>
+</ul></li>
+<li><p><strong>Data
+Section</strong>：资源本体，存放贴图、Mesh、声音等对象的实际数据。</p></li>
+</ul>
+<p>可根据 <code>ObjectInfo.byteStart</code> 和
+<code>ObjectInfo.byteSize</code> 从 Data Section
+中读取具体对象内容，并通过 TypeTree 解析其结构。</p>
+<h3 id="编辑器-yaml-模式与打包二进制格式的转换关系">编辑器 YAML
+模式与打包二进制格式的转换关系</h3>
+<ul>
+<li><strong>编辑器开发阶段</strong>：可启用 <code>Force Text</code>
+模式，使资源以 YAML 格式存储，便于版本控制与协作审阅。</li>
+<li><strong>打包阶段（BuildPlayer / AssetBundle）</strong>：所有 YAML
+文本会被自动转化为二进制序列化形式，以提高加载性能和压缩比。</li>
+</ul>
+<p>最终发布版本中的所有资源都以 Unity 自定义的二进制格式存储，并不再保留
+YAML 表达。</p>
+<h3 id="assetbundle文件结构">AssetBundle文件结构</h3>
+<p>AssetBundle
+是一个各种资源序列化后的集合，包括脚本、纹理、模型、音频等资源。
+<code>.unity3d</code> 或 <code>.bundle</code> 等资源打包文件时，会使用
+<code>BundleFile</code> 的结构。它遵循 Unity 的 <code>UnityFS</code> 或
+<code>UnityRaw</code> 等打包格式。以下是其中关键结构体
+<code>Header</code>、<code>StorageBlock</code> 和 <code>Node</code>
+的字段详细说明及其作用。</p>
+<h4 id="header">1. Header</h4>
+<p>Bundle 文件的开头部分，描述整个文件的基本结构和偏移信息。</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title">BundleFileHeader</span> &#123;</span><br><span class="line">    <span class="keyword">string</span> signature;        <span class="comment">// 格式标识，如 "UnityFS" 或 "UnityRaw"</span></span><br><span class="line">    <span class="keyword">uint</span> version;            <span class="comment">// 文件格式版本号（如 6, 7, 8）</span></span><br><span class="line">    <span class="keyword">string</span> unityVersion;     <span class="comment">// 构建该Bundle的Unity版本（如 2020.3.0f1）</span></span><br><span class="line">    <span class="keyword">string</span> unityRevision;    <span class="comment">// 精确版本号和修订信息</span></span><br><span class="line">    <span class="keyword">ulong</span> size;              <span class="comment">// 整个bundle文件的大小</span></span><br><span class="line">    <span class="keyword">uint</span> compressedBlocksInfoSize;   <span class="comment">// BlocksInfo的压缩大小</span></span><br><span class="line">    <span class="keyword">uint</span> uncompressedBlocksInfoSize; <span class="comment">// BlocksInfo的解压后大小</span></span><br><span class="line">    <span class="keyword">uint</span> flags;              <span class="comment">// 标志位，控制是否压缩、是否嵌入BlocksInfo等</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>字段说明：</p>
+<ul>
+<li><p><code>signature</code>：表示打包格式，常见为
+<code>UnityFS</code>，决定了后续字段的解析方式。</p></li>
+<li><p><code>version</code>：格式版本，不同版本字段解释有细微差异。</p></li>
+<li><p><code>unityVersion</code> /
+<code>unityRevision</code>：提供构建信息，用于兼容性判断。</p></li>
+<li><p><code>size</code>：整个 bundle
+文件长度，用于验证文件完整性。</p></li>
+<li><p><code>compressedBlocksInfoSize</code> /
+<code>uncompressedBlocksInfoSize</code>：紧随其后的 BlocksInfo
+数据块大小（压缩前后）。</p></li>
+<li><p><code>flags</code>：</p>
+<ul>
+<li>位 0：BlocksInfo 是否嵌入到 header 后部（否则在文件尾部）。</li>
+<li>位 1：BlocksInfo 是否经过压缩（如 LZ4, LZMA）。</li>
+</ul></li>
+</ul>
+<h4 id="storageblock">2. StorageBlock</h4>
+<p>描述 bundle 文件中每一个数据块的压缩与存储方式。</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title">StorageBlock</span> &#123;</span><br><span class="line">    <span class="keyword">uint</span> uncompressedSize;  <span class="comment">// 原始大小</span></span><br><span class="line">    <span class="keyword">uint</span> compressedSize;    <span class="comment">// 压缩后大小</span></span><br><span class="line">    <span class="keyword">ushort</span> flags;           <span class="comment">// 压缩方式标记（如 None, LZMA, LZ4）</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>字段说明：</p>
+<ul>
+<li><p><code>uncompressedSize</code>：该数据块在解压后的字节数。</p></li>
+<li><p><code>compressedSize</code>：实际在 bundle
+文件中存储的压缩数据大小。</p></li>
+<li><p><code>flags</code>：标志当前数据块使用的压缩算法：</p>
+<ul>
+<li><code>0x00</code>：无压缩（None）</li>
+<li><code>0x01</code>：LZMA</li>
+<li><code>0x02</code>：LZ4</li>
+<li><code>0x03</code>：LZ4HC</li>
+</ul></li>
+</ul>
+<p>这些数据块会依序排列，拼接出完整的资源数据流。</p>
+<h4 id="node">3. Node</h4>
+<p>描述 bundle 中的虚拟文件结构（例如一个 <code>.assets</code>
+文件或其他资源）。</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title">Node</span> &#123;</span><br><span class="line">    <span class="keyword">long</span> offset;            <span class="comment">// 在数据块拼接后的偏移（解压后流中的偏移）</span></span><br><span class="line">    <span class="keyword">long</span> size;              <span class="comment">// 文件大小</span></span><br><span class="line">    <span class="keyword">uint</span> flags;             <span class="comment">// 文件标志（通常未使用）</span></span><br><span class="line">    <span class="keyword">string</span> path;            <span class="comment">// 资源名称或虚拟路径</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>字段说明：</p>
+<ul>
+<li><code>offset</code>：该虚拟文件在整个资源流（解压后的数据拼接体）中的偏移位置。</li>
+<li><code>size</code>：该文件的长度。</li>
+<li><code>flags</code>：通常恒为0，可忽略。</li>
+<li><code>path</code>：在 bundle
+中定义的资源文件名称。例如：<code>CAB-xxxxxx</code>，或
+<code>sharedassets0.assets</code>。</li>
+</ul>
+<h4 id="bundle文件结构图">4. Bundle文件结构图</h4>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">+------------------------------+</span><br><span class="line">| BundleFileHeader            |</span><br><span class="line">|  - signature                |</span><br><span class="line">|  - version                  |</span><br><span class="line">|  - unityVersion             |</span><br><span class="line">|  - unityRevision            |</span><br><span class="line">|  - size                     |</span><br><span class="line">|  - compressedBlocksInfoSize|</span><br><span class="line">|  - uncompressedBlocksInfoSize|</span><br><span class="line">|  - flags                    |</span><br><span class="line">+------------------------------+</span><br><span class="line">            ↓</span><br><span class="line">+------------------------------+</span><br><span class="line">| Compressed BlocksInfo       | ← 可选：有些版本在文件尾部</span><br><span class="line">+------------------------------+</span><br><span class="line">            ↓ 解压后</span><br><span class="line">+------------------------------+</span><br><span class="line">| StorageBlock[]              | ← 描述接下来的压缩数据块结构</span><br><span class="line">+------------------------------+</span><br><span class="line">| Node[]                      | ← 描述解压数据中的虚拟文件信息</span><br><span class="line">+------------------------------+</span><br><span class="line">            ↓</span><br><span class="line">+------------------------------+</span><br><span class="line">| Compressed Data Blocks      | ← 实际资源数据（按 StorageBlock 分段）</span><br><span class="line">+------------------------------+</span><br><span class="line">            ↓ 解压拼接后</span><br><span class="line">+------------------------------+</span><br><span class="line">| [Node 1 Content]            |</span><br><span class="line">+------------------------------+</span><br><span class="line">| [Node 2 Content]            |</span><br><span class="line">+------------------------------+</span><br><span class="line">| ...                         |</span><br><span class="line">+------------------------------+</span><br></pre></td></tr></table></figure>
+<h3 id="addressables">Addressables</h3>
+<p>Unity 的 Addressables 系统是 Unity
+提供的一套高级资源管理与异步加载框架，它基于 AssetBundle
+构建，但提供了更灵活的资源打包、定位与生命周期管理机制。以下从组件结构、实现机制和与传统
+AssetBundle 的差异三个方面进行详细说明。</p>
+<h4 id="addressables-的主要组件">Addressables 的主要组件</h4>
+<ol type="1">
+<li>Addressable Asset Settings (地址配置)</li>
+</ol>
+<ul>
+<li>位于 <code>Assets/AddressableAssetsData</code>。</li>
+<li>包含全局配置（如构建平台、资源定位方式、Profiles 设置等）。</li>
+</ul>
+<ol start="2" type="1">
+<li>AddressableAssetGroup</li>
+</ol>
+<ul>
+<li><p>Addressable 的资源分组单位。</p></li>
+<li><p>每组可以设置独立的打包策略、加载路径、构建方式。</p></li>
+<li><p>常见的 Group 类型：</p>
+<ul>
+<li><strong>Static Content</strong>：固定内容，随包一同发布。</li>
+<li><strong>Remote Content</strong>：远程 CDN 加载资源。</li>
+</ul></li>
+</ul>
+<ol start="3" type="1">
+<li>AddressableAssetEntry</li>
+</ol>
+<ul>
+<li>每个被标记为 addressable 的资源，对应一个 Entry。</li>
+<li>包含资源路径、地址名、Label 等属性。</li>
+</ul>
+<ol start="4" type="1">
+<li>Profile Settings</li>
+</ol>
+<ul>
+<li>支持设置多个环境（开发、测试、发布）下的变量。</li>
+<li>如：<code>RemoteLoadPath = http://cdn.mycompany.com/[BuildTarget]</code></li>
+</ul>
+<ol start="5" type="1">
+<li>Content Catalog</li>
+</ol>
+<ul>
+<li>构建时生成的 JSON 文件，描述所有资源的位置与依赖信息。</li>
+<li>加载 Addressable 时，先加载 Catalog。</li>
+</ul>
+<ol start="6" type="1">
+<li>ResourceLocator</li>
+</ol>
+<ul>
+<li>Catalog 解析后生成的结构，负责将地址映射为资源路径。</li>
+<li>Addressables.LoadAssetAsync() 内部依赖它完成地址到路径的解析。</li>
+</ul>
+<ol start="7" type="1">
+<li>ResourceManager</li>
+</ol>
+<ul>
+<li>Addressables 底层的加载调度中心。</li>
+<li>管理加载任务、依赖树、引用计数、缓存。</li>
+</ul>
+<ol start="8" type="1">
+<li>IResourceProvider</li>
+</ol>
+<ul>
+<li>抽象加载提供器接口。</li>
+<li>可自定义如从网络、本地磁盘、WebGL 缓存中加载资源。</li>
+</ul>
+<h4 id="addressables-与-assetbundle-的区别">Addressables 与 AssetBundle
+的区别</h4>
+<ol type="1">
+<li>资源定位机制</li>
+</ol>
+<ul>
+<li><strong>AssetBundle</strong>：通过资源路径或 Bundle
+名称定位资源，依赖关系由开发者显式管理。</li>
+<li><strong>Addressables</strong>：通过地址系统与 Catalog
+文件进行统一索引，通过 <code>IResourceLocator</code> +
+哈希索引管理资源映射，解耦了资源名与加载方式。</li>
+</ul>
+<ol start="2" type="1">
+<li>加载调度系统</li>
+</ol>
+<ul>
+<li><strong>AssetBundle</strong>：需手动管理 AssetBundle
+加载、依赖、释放、缓存。</li>
+<li><strong>Addressables</strong>：封装在 <code>ResourceManager</code>
+与 <code>AsyncOperationHandle</code>
+中，自动管理引用计数、自动卸载、自动释放依赖。</li>
+</ul>
+<ol start="3" type="1">
+<li>Catalog + RuntimeData</li>
+</ol>
+<ul>
+<li>Addressables 构建生成的 <code>catalog_xxx.json</code>
+是核心索引文件，记录资源地址、哈希、依赖、提供器类型。</li>
+<li><code>RuntimeData</code>
+是构建期生成的内部数据结构，包括本地清单、远程路径映射、默认Provider绑定信息。</li>
+</ul>
+<ol start="4" type="1">
+<li>提供器架构（Provider）</li>
+</ol>
+<ul>
+<li>Addressables 使用 <code>IResourceProvider</code>
+接口（如：BundledAssetProvider、TextDataProvider、AtlasSpriteProvider
+等）支持加载多种资源类型。</li>
+<li>每种资源类型可配置独立 Provider，也可扩展自定义 Provider
+支持版本控制、加密等。</li>
+</ul>
+<ol start="5" type="1">
+<li>构建流程</li>
+</ol>
+<ul>
+<li>Addressables 构建流程为：分析分组 -&gt; 计算依赖 -&gt; 构建
+AssetBundle -&gt; 生成 Catalog 和链接关系 -&gt; 可选生成 BuildLayout
+文件（用于调试和分析）</li>
+<li>相比之下，AssetBundle 仅构建资源和依赖 Bundle，没有结构化 Catalog
+文件。</li>
+</ul>
+<ol start="6" type="1">
+<li>远程与热更新机制</li>
+</ol>
+<ul>
+<li>Addressables 提供
+<code>CheckForCatalogUpdates</code>、<code>DownloadDependenciesAsync</code>
+等接口直接进行差异比对与远程下载。</li>
+<li>核心机制是基于 Catalog 哈希比对与本地缓存标记，而传统 AssetBundle
+需开发者手动构建下载/更新逻辑。</li>
+</ul>
+<h4 id="常用-api">常用 API</h4>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 通过地址加载资源</span></span><br><span class="line">Addressables.LoadAssetAsync&lt;GameObject&gt;(<span class="string">"PlayerPrefab"</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 加载并实例化</span></span><br><span class="line">Addressables.InstantiateAsync(<span class="string">"Enemy"</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 卸载资源</span></span><br><span class="line">Addressables.Release(handle);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取多个带标签的资源</span></span><br><span class="line">Addressables.LoadAssetsAsync&lt;GameObject&gt;(<span class="string">"enemy"</span>, callback);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 同步释放实例对象</span></span><br><span class="line">Addressables.ReleaseInstance(instance);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 通过标签加载多个资源（异步）</span></span><br><span class="line">Addressables.LoadAssetsAsync&lt;GameObject&gt;(<span class="keyword">new</span> List&lt;<span class="keyword">object</span>&gt; &#123; <span class="string">"environment"</span>, <span class="string">"npc"</span> &#125;, obj =&gt; &#123;</span><br><span class="line">    Debug.Log(<span class="string">"加载完成："</span> + obj.name);</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 通过资源名称加载（资源名称即为 key 或地址）</span></span><br><span class="line"><span class="keyword">string</span> address = <span class="string">"MyUI/StartButton"</span>;</span><br><span class="line">Addressables.LoadAssetAsync&lt;GameObject&gt;(address).Completed += handle =&gt; &#123;</span><br><span class="line">    <span class="keyword">if</span> (handle.Status == AsyncOperationStatus.Succeeded)</span><br><span class="line">    &#123;</span><br><span class="line">        GameObject go = handle.Result;</span><br><span class="line">        GameObject.Instantiate(go);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h4 id="构建与热更新使用流程示例">构建与热更新使用流程示例</h4>
+<ol type="1">
+<li>构建 Addressables 内容（在编辑器中）</li>
+</ol>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 编辑器中构建 Addressables</span></span><br><span class="line">AddressableAssetSettings.BuildPlayerContent();</span><br></pre></td></tr></table></figure>
+<ol start="2" type="1">
+<li>检查 Catalog 更新与远程热更新资源</li>
+</ol>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 检查是否有 Catalog 更新</span></span><br><span class="line"><span class="keyword">var</span> checkHandle = Addressables.CheckForCatalogUpdates();</span><br><span class="line">checkHandle.Completed += handle =&gt; &#123;</span><br><span class="line">    <span class="keyword">if</span> (handle.Result.Count &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="comment">// 下载更新后的 Catalog</span></span><br><span class="line">        <span class="keyword">var</span> updateHandle = Addressables.UpdateCatalogs(handle.Result);</span><br><span class="line">        updateHandle.Completed += catalogHandle =&gt; &#123;</span><br><span class="line">            <span class="comment">// 可在此下载资源依赖</span></span><br><span class="line">            Addressables.DownloadDependenciesAsync(<span class="string">"MyRemoteLabel"</span>);</span><br><span class="line">        &#125;;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<ol start="3" type="1">
+<li>工程中加载远程资源的完整流程</li>
+</ol>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">IEnumerator <span class="title">LoadRemoteAsset</span>(<span class="params"><span class="keyword">string</span> key</span>)</span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="comment">// 预下载依赖资源</span></span><br><span class="line">    <span class="keyword">var</span> download = Addressables.DownloadDependenciesAsync(key);</span><br><span class="line">    <span class="keyword">yield</span> <span class="keyword">return</span> download;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 异步加载资源</span></span><br><span class="line">    <span class="keyword">var</span> handle = Addressables.LoadAssetAsync&lt;GameObject&gt;(key);</span><br><span class="line">    <span class="keyword">yield</span> <span class="keyword">return</span> handle;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (handle.Status == AsyncOperationStatus.Succeeded)</span><br><span class="line">    &#123;</span><br><span class="line">        GameObject obj = handle.Result;</span><br><span class="line">        <span class="comment">// 实例化</span></span><br><span class="line">        GameObject instance = GameObject.Instantiate(obj);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 使用完毕后销毁实例</span></span><br><span class="line">        Addressables.ReleaseInstance(instance);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 卸载依赖（可选）</span></span><br><span class="line">    Addressables.Release(handle);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol start="4" type="1">
+<li>加载本地资源</li>
+</ol>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 本地路径加载方式相同，Addressables 自动判断是否为本地 Bundle</span></span><br><span class="line"><span class="keyword">var</span> handle = Addressables.LoadAssetAsync&lt;GameObject&gt;(<span class="string">"LocalAssetKey"</span>);</span><br><span class="line">handle.Completed += h =&gt; &#123;</span><br><span class="line">    <span class="keyword">if</span> (h.Status == AsyncOperationStatus.Succeeded)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">var</span> go = GameObject.Instantiate(h.Result);</span><br><span class="line">        <span class="comment">// 使用完成后可销毁并释放资源</span></span><br><span class="line">        Addressables.ReleaseInstance(go);</span><br><span class="line">        Addressables.Release(h);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h2 id="常用资源">常用资源</h2>
+<h3 id="核心资源类型划分与内存模型">核心资源类型划分与内存模型</h3>
+<p>Unity
+支持的资源种类涵盖从图形渲染、音频播放到逻辑控制的方方面面，其常见分类及用途如下：</p>
+<ol type="1">
+<li><strong>Texture2D / Texture3D / Cubemap</strong>：图像纹理资源，用于
+2D/3D 贴图、天光、环境映射等。</li>
+<li><strong>Mesh</strong>：模型资源，包含顶点坐标、法线、UV、切线、索引等几何结构数据。</li>
+<li><strong>AnimationClip</strong>：关键帧动画与曲线数据集合，驱动模型变换、骨骼动画等。</li>
+<li><strong>AudioClip</strong>：用于存储原始音频数据，支持
+PCM、ADPCM、Vorbis 等格式。</li>
+<li><strong>Shader /
+Material</strong>：图形着色语言代码与其参数封装体，负责控制表面渲染效果。</li>
+<li><strong>Font</strong>：字体资源，支持 TrueType、OpenType
+等格式。</li>
+<li><strong>TextAsset</strong>：存储任意文本或二进制文件内容的通用资源。</li>
+<li><strong>VideoClip</strong>：视频数据资源，供 VideoPlayer
+播放使用。</li>
+<li><strong>Sprite</strong>：2D 图像切片，常用于 UI 元素或 2D
+动画。</li>
+<li><strong>Prefab</strong>：预制体资源，是组件与 GameObject
+层级结构的序列化封装。</li>
+<li><strong>Scene</strong>：场景资源，描述场景中所有对象的状态与引用。</li>
+<li><strong>ScriptableObject</strong>：自定义数据容器，广泛用于游戏逻辑配置。</li>
+<li><strong>AnimatorController /
+StateMachine</strong>：动画控制器与状态机配置资源。</li>
+</ol>
+<p>这些资源在运行时均由 C++ 层的原生结构（NativeObject）表示，其 C#
+封装对象中通常包含一个 <code>m_CachedPtr</code>
+字段，指向真实的数据结构体。</p>
+<h3 id="资源导入器-importer-与转换管线">资源导入器 Importer
+与转换管线</h3>
+<p>Unity 的 Importer
+系统负责解析外部资源格式，并将其转换为统一的中间表示与持久化形式。不同类型的资源使用不同的
+Importer 进行处理。以下是典型资源的转换路径：</p>
+<table>
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 19%" />
+<col style="width: 36%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Importer</th>
+<th>支持的原始格式</th>
+<th>配置结构（来自 .meta）</th>
+<th>中间资源结构（Library 存储）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TextureImporter</td>
+<td>.png, .jpg, .tga, .dds</td>
+<td>TextureImporterSettings + TextureSettings</td>
+<td>Texture2D + StreamingInfo</td>
+</tr>
+<tr>
+<td>ModelImporter</td>
+<td>.fbx, .obj, .dae</td>
+<td>RigImportSettings + MeshImportSettings</td>
+<td>Mesh / Avatar / AnimationClip</td>
+</tr>
+<tr>
+<td>AudioImporter</td>
+<td>.mp3, .wav, .ogg</td>
+<td>AudioImporterSettings</td>
+<td>AudioClip</td>
+</tr>
+<tr>
+<td>ShaderImporter</td>
+<td>.shader</td>
+<td>ShaderImportSettings</td>
+<td>Shader + ShaderSubProgram</td>
+</tr>
+<tr>
+<td>AnimationClipImporter</td>
+<td>.anim</td>
+<td>AnimationClipSettings + CurveMappings</td>
+<td>AnimationClip</td>
+</tr>
+<tr>
+<td>VideoClipImporter</td>
+<td>.mp4, .mov</td>
+<td>VideoImporterSettings</td>
+<td>VideoClip</td>
+</tr>
+<tr>
+<td>ScriptImporter</td>
+<td>.cs</td>
+<td>MonoImporterSettings</td>
+<td>MonoScript</td>
+</tr>
+</tbody>
+</table>
+<p>导入完成后的资源对象会被序列化并缓存至 <code>Library/</code>
+目录，以优化后续构建和编辑流程。</p>
+<h3 id="nativeobject-内存结构分析">NativeObject 内存结构分析</h3>
+<p>所有 Unity 的 C# 资源对象（如 Texture2D）底层都是对原生 C++
+结构体的托管包装，其核心字段 <code>m_CachedPtr</code>
+指向内存中的实际数据。</p>
+<p>以 Texture2D 为例，其底层结构类似如下：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">Texture2D</span> :</span> Texture &#123;</span><br><span class="line">    <span class="keyword">int</span> m_Width;</span><br><span class="line">    <span class="keyword">int</span> m_Height;</span><br><span class="line">    TextureFormat m_Format;</span><br><span class="line">    StreamingInfo m_StreamData;</span><br><span class="line">    <span class="comment">// 其他字段略</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>运行时，Unity
+的对象系统维护一张对象表，用于管理所有原生对象的生命周期、引用关系及其与托管对象的映射。</p>
+<h1 id="内存">内存</h1>
+<h2 id="pc-内存架构与管理机制">PC 内存架构与管理机制</h2>
+<h3 id="架构特性">架构特性</h3>
+<ul>
+<li><strong>分离内存结构</strong>：PC 通常配备独立 CPU
+主内存（DDR4/DDR5）与 GPU 专用显存（GDDR），资源在 CPU 与 GPU 间通过
+PCIe 总线传输，需注意显存带宽和 Host-to-Device 的数据拷贝开销。</li>
+<li><strong>地址空间更大</strong>：64 位操作系统提供大于 4GB
+的虚拟地址空间。现代 Windows/Linux 提供每进程高达 TB
+级别的虚拟空间。</li>
+<li><strong>NUMA（非一致性内存访问）</strong>：多核 CPU
+常见于服务器/桌面端，存在多个物理内存节点，跨 NUMA
+节点访问将增加延迟。</li>
+</ul>
+<h3 id="操作系统内存管理">操作系统内存管理</h3>
+<ul>
+<li><strong>分页系统</strong>：操作系统使用分页机制管理内存，常用 4KB
+页，并支持大页（Huge Page）。通过页表（Page
+Table）实现虚拟地址到物理地址的映射。</li>
+<li><strong>页面换出（Swapping）</strong>：在内存不足时，系统将部分内存页写入磁盘（Swap
+File/Swap Partition），释放物理内存用于高优先级任务。Unity 应用在 Swap
+下运行可能出现显著卡顿或帧率下降。</li>
+<li><strong>内存保护机制</strong>：通过页属性标识读/写/执行权限，防止非法访问，如访问空指针或释放后的内存会触发“段错误”（Segfault）。</li>
+</ul>
+<h2 id="手机内存硬件与系统层">手机内存硬件与系统层</h2>
+<h3
+id="操作系统的内存申请使用与释放流程">操作系统的内存申请、使用与释放流程</h3>
+<ul>
+<li><strong>内存申请（Allocation）</strong>：操作系统通过页分配器（如
+<code>vm_allocate</code> on iOS, <code>mmap</code> on
+Linux/Android）按页为应用分配虚拟地址空间，通常以 4KB
+页为单位。分配时可能并未实际占用物理内存，只有在访问该页时（写入）才会触发“页错误”并分配真实物理页（按需分配策略）。</li>
+<li><strong>内存使用（Access）</strong>：当应用访问虚拟内存时，操作系统通过页表（Page
+Table）和 TLB（Translation Lookaside
+Buffer）将虚拟地址映射到物理地址。部分内存页可能被标记为只读或共享页，以提高安全性与效率。</li>
+<li><strong>内存释放（Deallocation）</strong>：当进程释放内存（如通过
+<code>free()</code>、<code>munmap()</code>
+或系统层回收机制），对应虚拟页会被从页表中移除，物理页被标记为“可回收”。在某些平台上，这些页可能仍暂时保留（作为缓存），直到系统主动回收。</li>
+<li><strong>后台回收与内存压力响应</strong>：在内存压力高时，系统会回收不活跃页（Inactive
+Pages）、清除 Cache、或者直接终止后台进程（如 Android 的 LMK，iOS 的
+Jetsam）。内存释放过程是懒惰式的，尽可能避免频繁回收和再次分配。</li>
+</ul>
+<h3 id="ios-内存架构与管理机制">iOS 内存架构与管理机制</h3>
+<ul>
+<li><strong>统一内存架构</strong>：iOS设备通常采用Unified Memory
+Architecture (UMA)，CPU 和 GPU 共享 LPDDR
+系统内存，无需显式拷贝资源至独立显存，有利于资源访问效率，但也意味着 GPU
+消耗的内存直接挤占 CPU 可用内存。</li>
+<li><strong>无Swap机制</strong>：iOS 虽使用虚拟内存地址系统，但不允许
+swap 到磁盘，所有内存申请都必须在物理RAM范围内完成。</li>
+<li><strong>内存警告机制</strong>：应用若占用过多内存，系统会触发
+<code>UIApplicationDidReceiveMemoryWarningNotification</code> 或 SwiftUI
+的
+<code>@Environment(\.memoryWarning)</code>。若未及时响应释放资源，系统可能直接终止应用。</li>
+<li><strong>后台内存淘汰策略</strong>：在后台，iOS 会依据 memory
+pressure 使用 Jetsam 策略驱逐后台进程。Jetsam 是 Darwin 内核中 OOM
+终结者，对内存压力进行 PID 层级逐步回收。</li>
+</ul>
+<h3 id="android-内存架构与管理机制">Android 内存架构与管理机制</h3>
+<ul>
+<li><strong>设备差异化严重</strong>：Android 设备从低端 512MB 到高端
+16GB RAM 均有，需针对低端设备优化路径分离。</li>
+<li><strong>Zygote预加载机制</strong>：Android 使用 Zygote
+机制共享系统框架库，在进程fork时减少初始化成本和内存消耗。</li>
+<li><strong>GC管理机制</strong>：ART VM
+默认采用并发分代垃圾回收（Concurrent Generational GC），分为
+Eden、Survivor、Old 区，GC Pause Time 控制至 10ms
+以内。大对象（&gt;256K）直接进入老年代。</li>
+<li><strong>内存回收接口</strong>：应用生命周期中可通过
+<code>onTrimMemory()</code> 钩子处理如 TRIM_MEMORY_BACKGROUND /
+RUNNING_LOW 等状态，及时释放缓存资源。</li>
+<li><strong>堆限制查询</strong>：可通过
+<code>ActivityManager.getMemoryClass()</code> 或
+<code>getLargeMemoryClass()</code> 获取堆上限（如 128MB, 256MB
+等）。</li>
+</ul>
+<h2 id="unity引擎内存结构与使用方式">Unity引擎内存结构与使用方式</h2>
+<h3 id="unity-内存划分详解">Unity 内存划分详解</h3>
+<ul>
+<li><strong>托管内存（Managed）</strong>：C# 层对象，如
+GameObject、MonoBehaviour、ScriptableObject 等，受 GC 控制。GC
+不可预期，建议使用对象池避免频繁触发。</li>
+<li><strong>原生内存（Native）</strong>：Unity 内核层 C++
+数据结构：渲染、粒子系统、动画状态机、NavMesh 等。无法被 C# 的 GC
+控制，需手动释放资源（如 Mesh、Texture、ComputeBuffer）。</li>
+<li><strong>图形内存（Graphics/GPU）</strong>：上传到 GPU
+的资源，包括贴图、Mesh、ShadowMap、RenderTexture 等。在 OpenGL ES /
+Metal / Vulkan 下共享系统内存，容易与其他内存抢占资源。</li>
+<li><strong>临时内存（Temp
+Allocator）</strong>：帧内临时使用，如命中测试、物理检测、Render
+Loop中间态等，大小固定（4MB），超出将退化为 Heap Alloc，导致 GC Alloc
+增加。</li>
+</ul>
+<h3 id="unity-移动端内存行为">Unity 移动端内存行为</h3>
+<ul>
+<li><strong>Memory Profiler 分类</strong>：分为 Total Reserved、Total
+Used、Mono、Gfx、Other，便于定位问题。</li>
+<li><strong>IL2CPP 与 Mono 差异</strong>：IL2CPP 性能更好、GC
+控制更紧，代码大小增加，Native 内存增加；Mono
+适合编辑器或开发测试环境。</li>
+<li><strong>默认内存策略</strong>：资源尽量异步加载、使用 Addressables
+精细控制生命周期，避免热区资源常驻内存。</li>
+</ul>
+<h2 id="unity-开发中的内存优化技巧">Unity 开发中的内存优化技巧</h2>
+<h3 id="纹理优化">纹理优化</h3>
+<ul>
+<li><p><strong>压缩格式选择</strong>：</p>
+<ul>
+<li>iOS：推荐使用 ASTC（质量/大小可控）；老设备兼容使用
+PVRTC（压缩质量低）。</li>
+<li>Android：优先 ASTC，其次 ETC2，最低 ETC1（无 Alpha）。Unity
+可通过平台导入设置区分纹理压缩格式。</li>
+</ul></li>
+<li><p><strong>MipMap 与 StreamingMip</strong>：开启 Mipmap 可节省 GPU
+带宽；结合 <code>Texture Streaming</code>
+可按需加载低分辨率贴图，显著降低内存占用。</p></li>
+<li><p><strong>Atlas
+图集管理</strong>：将小纹理合并为大图集可减少材质切换和 Draw
+Call，但需控制尺寸，避免合图过大导致 StreamingMip 效率低下。</p></li>
+</ul>
+<h3 id="网格与渲染优化">网格与渲染优化</h3>
+<ul>
+<li><p><strong>Mesh Compression</strong>：在导入设置中开启 Mesh
+Compression（如 Medium/High）减少顶点数据占用。</p></li>
+<li><p><strong>静态合批与动态合批</strong>：</p>
+<ul>
+<li>Static Batching：占用更多内存，但极大减少 Draw Call。</li>
+<li>Dynamic Batching：限制顶点数 &lt; 900；小物体适合。</li>
+</ul></li>
+<li><p><strong>GPU Instancing</strong>：对重复物体使用 Instancing
+替代合批，节省 CPU → GPU 的通信开销。</p></li>
+<li><p><strong>遮挡剔除/Frustum
+Culling</strong>：关闭不可见对象渲染，降低 GPU
+运算压力与带宽使用。</p></li>
+</ul>
+<h3 id="动画系统优化">动画系统优化</h3>
+<ul>
+<li><strong>Animator Culling Mode</strong>：设置为
+<code>Cull Update Transforms</code>
+可在角色不在视野时停止动画更新。</li>
+<li><strong>Bone
+限制</strong>：控制单角色骨骼数，限制每顶点绑定骨骼数量（&lt;4）。</li>
+<li><strong>动画压缩设置</strong>：启用 <code>Optimal</code>
+压缩方式，移除冗余关键帧，减少曲线数据。</li>
+<li><strong>Bake 动画</strong>：将运行时动画 Bake 到 Transform
+减少实时计算。</li>
+</ul>
+<h3 id="addressables-使用技巧">Addressables 使用技巧</h3>
+<ul>
+<li><p><strong>生命周期管理</strong>：</p>
+<ul>
+<li>每次 <code>LoadAssetAsync</code> 后应配对
+<code>Addressables.Release</code>；否则引用计数未清零，导致内存泄漏。</li>
+</ul></li>
+<li><p><strong>异步加载场景与资源</strong>：使用
+<code>Addressables.LoadSceneAsync</code> / <code>InstantiateAsync</code>
+异步加载，减少卡顿；场景切换完成后手动 <code>UnloadSceneAsync</code> 和
+<code>Release</code>。</p></li>
+<li><p><strong>多平台资源分包</strong>：资源按平台/分辨率拆包（如
+HD/SD），避免高配资源在低端设备加载。</p></li>
+</ul>
+<h3 id="gc与堆内存优化">GC与堆内存优化</h3>
+<ul>
+<li><p><strong>减少GC Alloc</strong>：</p>
+<ul>
+<li>避免每帧字符串拼接、LINQ。</li>
+<li>使用对象池代替频繁 Instantiate/Destroy。</li>
+<li>使用 <code>Struct</code> 替代 Class 避免堆分配。</li>
+</ul></li>
+<li><p><strong>增量GC（Incremental GC）</strong>：Unity 2019+
+支持，分帧执行 GC，避免卡顿尖峰。</p></li>
+<li><p><strong>Memory
+Profiler</strong>：定期生成快照，比较引用链定位泄漏路径（如
+ScriptableObject 没有正确释放）。</p></li>
+</ul>
+<h3 id="工具链">工具链</h3>
+<ul>
+<li><strong>Unity Profiler</strong>：观察 GC Alloc、Native Mem、Gfx Mem
+曲线，分析每帧内存使用。</li>
+<li><strong>Memory
+Profiler（Package）</strong>：快照对比、引用路径分析。</li>
+<li><strong>Android Profiler / Xcode Instruments</strong>：分析 Native
+层使用、Java 层 GC/Leaks。</li>
+<li><strong>ADB shell</strong>：结合 lowmem-killer/stressapptest 模拟
+OOM 场景。</li>
+</ul>
+<h2 id="平台差异与特别注意事项">平台差异与特别注意事项</h2>
+<h3 id="android-特有限制">Android 特有限制</h3>
+<ul>
+<li>部分 Android Go 设备堆上限仅 128MB，务必支持资源降级。</li>
+<li>部分 GPU（如旧 Mali）不支持 ASTC，需动态切换纹理格式。</li>
+<li>Android 的 RenderTexture 默认内存常驻，需主动销毁。</li>
+</ul>
+<h3 id="ios-特性优化">iOS 特性优化</h3>
+<ul>
+<li>使用 <code>RenderTextureMemoryless.Depth</code> 减少 Tile Memory
+压力。</li>
+<li>iOS Metal 统一内存访问快，但若分辨率过高，GPU 资源争抢更激烈。</li>
+<li>使用 <code>OnLowMemory()</code> 钩子及时清理缓存资源，防止 Jetsam
+Kill。</li>
+</ul>
+<h1 id="代码优化cpu时间">代码优化(CPU时间)</h1>
+<p>明白了。我将整理一份针对 Unity 中使用 C# 和 XLua 的 CPU
+优化方案，适用于 3D SLG 游戏，覆盖 PC、iOS 和 Android 平台，并对比 Mono
+与 IL2CPP 的差异，同时包括 Unity Profiler 工具在优化过程中的使用建议。
+请稍等片刻，我会尽快为你准备好详细内容。</p>
+<h2 id="常见c脚本瓶颈及优化建议">常见C#脚本瓶颈及优化建议</h2>
+<ul>
+<li><p><strong>GetComponent/查找</strong>：频繁调用
+<code>GetComponent</code>、<code>Find</code>、<code>Camera.main</code>
+等会遍历对象池，非常耗时，应在 <code>Awake</code>/<code>Start</code>
+中缓存引用。如下例所示，将 <code>transform</code>
+缓存到字段中避免重复查找：</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> Transform _transform;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">Awake</span>(<span class="params"></span>)</span> &#123;</span><br><span class="line">    _transform = transform; <span class="comment">// 缓存 Transform</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于 <code>Camera.main</code>、标签查找等，同样应缓存或在 Inspector
+里引用。</p></li>
+<li><p><strong>Update 调用开销</strong>：每个挂 <code>Update</code> 的
+<code>MonoBehaviour</code>
+都会产生管理开销，数量过多时影响极大。当游戏中数百或上千个物体需要每帧更新时，建议使用全局管理器统一调度，而不是每个对象独立
+<code>Update</code>。如 Unity
+官方建议，将需要更新的对象注册到单例管理器中，由管理器在
+<code>Update</code> 中遍历调用：</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">UnitManager</span> : <span class="title">MonoBehaviour</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">readonly</span> List&lt;Unit&gt; _units = <span class="keyword">new</span> List&lt;Unit&gt;();</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">Register</span>(<span class="params">Unit u</span>)</span> &#123; _units.Add(u); &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">Unregister</span>(<span class="params">Unit u</span>)</span> &#123; _units.Remove(u); &#125;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">Update</span>(<span class="params"></span>)</span> &#123;</span><br><span class="line">        <span class="keyword">float</span> dt = Time.deltaTime;</span><br><span class="line">        <span class="keyword">foreach</span> (<span class="keyword">var</span> u <span class="keyword">in</span> _units) u.CustomUpdate(dt);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">Unit</span> : <span class="title">MonoBehaviour</span> &#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">OnEnable</span>(<span class="params"></span>)</span> &#123; UnitManager.Register(<span class="keyword">this</span>); &#125;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">OnDisable</span>(<span class="params"></span>)</span> &#123; UnitManager.Unregister(<span class="keyword">this</span>); &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">CustomUpdate</span>(<span class="params"><span class="keyword">float</span> dt</span>)</span> &#123; <span class="comment">/* 单位逻辑 */</span> &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这样能避免大量原生到托管回调切换的开销。</p></li>
+<li><p><strong>委托和事件</strong>：C#的委托在添加/移除回调时会复制内部列表，频繁的订阅/取消订阅会造成大量开销。对于高频率的事件管理，尽量避免直接使用
+<code>delegate</code>；可以改用自定义的可快速插入/删除的数据结构（如
+<code>List&lt;Action&gt;</code>
+或用户管理的事件分发机制）。在更新管理器中使用委托订阅时要注意，如果每帧动态添加/移除，性能会急剧下降。</p></li>
+<li><p><strong>反射</strong>：反射调用极慢，比直接调用慢数百到上千倍。优化思路是<strong>绕开反射</strong>：可预先缓存
+<code>MethodInfo</code>/<code>FieldInfo</code>，或使用
+<code>Delegate.CreateDelegate</code>、<code>Expression</code>
+树等生成委托来调用。注意 IL2CPP 模式下不支持 <code>IL.Emit</code>
+和动态表达式，最好改用委托或指针操作。总之，能用常规代码解决的场景尽量不要使用反射，若必须使用，要做缓存处理。</p></li>
+<li><p><strong>结构体与装箱</strong>：频繁使用值类型（struct）或属性访问可能带来隐性开销。例如反复使用
+<code>Vector3</code>
+自带字段可能会装箱。优化建议是将多个值型参数打平成静态方法，避免在Lua或
+C# 侧创建额外对象。例如：</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">class</span> <span class="title">TransformUtil</span> &#123;</span><br><span class="line">    <span class="comment">// C#静态方法一次性设置坐标，比Lua逐字段赋值快得多</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">SetXYZ</span>(<span class="params"><span class="keyword">this</span> Transform t, <span class="keyword">float</span> x, <span class="keyword">float</span> y, <span class="keyword">float</span> z</span>)</span> &#123;</span><br><span class="line">        t.position = <span class="keyword">new</span> Vector3(x, y, z);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>XLua调用时 <code>transform:setXYZ(x,y,z)</code> 的效率比
+<code>transform.position = {x=..}</code> 高数倍。</p></li>
+<li><p><strong>内存分配与GC</strong>：运行时大量分配会触发
+GC，影响帧率。应尽量避免在 <code>Update</code>
+或热路径中新建对象。例如，不要每帧 <code>new List&lt;&gt;()</code>
+或拼接字符串，而应复用容器或使用对象池。如下示例，将列表提前创建并清空：</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">readonly</span> <span class="keyword">int</span> listCapacity = <span class="number">100</span>;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">readonly</span> List&lt;<span class="keyword">int</span>&gt; _list = <span class="keyword">new</span> List&lt;<span class="keyword">int</span>&gt;(listCapacity);</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">Update</span>(<span class="params"></span>)</span> &#123;</span><br><span class="line">    _list.Clear();</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> i=<span class="number">0</span>; i&lt;listCapacity; i++) _list.Add(i);</span><br><span class="line">    <span class="comment">// … 使用_list</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这样避免了每帧构造新列表的 <code>GC.Alloc</code>。另外，应小心使用
+<code>foreach</code> 遍历（旧版本Unity会因 Enumerator 装箱导致
+GC），常规可改用 <code>for</code> 循环或缓存迭代器。</p></li>
+<li><p><strong>Lambda与闭包</strong>：在 Lambda
+表达式中捕获局部变量或实例字段会产生闭包对象，触发额外分配。尽量避免频繁在回调中使用捕获局部变量，如不需要可用静态变量替代。</p></li>
+<li><p><strong>其他注意点</strong>：避免每帧生成大量字符串（可用
+<code>StringBuilder</code>）、禁用未使用的组件或脚本、合理拆分场景避免运行时加载过多对象等。</p></li>
+</ul>
+<h2 id="xlua脚本性能优化">XLua脚本性能优化</h2>
+<ul>
+<li><p><strong>C#⇆Lua 交互开销</strong>：XLua
+等桥接方案每次从Lua侧访问C#对象时，都会经过
+<code>ObjectTranslator</code> 的查表、推栈/取值等过程，开销极大。例如
+<code>gameobj.transform.position = pos</code>
+这样的调用在Lua中会经历多次翻译和分配，导致大量 CPU 时间和 GC
+分配。优化方法是减少跨语言调用次数：</p>
+<ul>
+<li><strong>缓存C#对象</strong>：将常用 C#
+对象保存在Lua局部变量中，避免重复查找。</li>
+<li><strong>静态函数替代成员</strong>：尽可能将逻辑封装为静态方法导出，避免在Lua中每次访问实例成员都要做对象查找。比如写成
+<code>LuaUtil.SetPos(obj, x,y,z)</code>
+用原生C#方法设置位置，可省去transform中间对象的反复创建，提升明显。</li>
+<li><strong>减少参数/返回类型复杂度</strong>：尽量使用基本类型作为参数和返回，避免在Lua和C#之间频繁传递
+Unity 特有的值类型（如
+<code>Vector3</code>、<code>Quaternion</code>）或数组，因为它们需要多次栈操作和内存分配。例如，把
+<code>void SetPos(GameObject obj, Vector3 pos)</code> 拆成
+<code>void SetPos(GameObject obj, float x, float y, float z)</code>，从测试来看会快得多。</li>
+</ul></li>
+<li><p><strong>值类型与GC优化</strong>：XLua支持在C#代码中为值类型加
+<code>[GCOptimize]</code> 属性，用来优化 C#&lt;–&gt;Lua
+之间的值类型传递。带 <code>GCOptimize</code> 的普通值类型（纯值域的
+struct、枚举及其数组）在传递时可以避免 GC
+分配。建议对需要频繁在Lua中传递的自定义 struct 添加
+<code>[GCOptimize]</code> 和 <code>[LuaCallCSharp]</code>
+标记。</p></li>
+<li><p><strong>Lua脚本本身优化</strong>：在Lua侧也要尽量减少中间创建。使用局部变量而不是全局，每帧循环中避免用<code>table.insert</code>等高开销操作；对于大量运算可考虑在C#侧提前实现为函数，Lua只作函数调用。避免在Lua里频繁创建临时表或字符串。</p></li>
+<li><p><strong>全局变量与引用</strong>：注意Lua持有的C#对象引用会阻止C#垃圾回收。应及时将不再使用的Lua全局置为
+<code>nil</code>，或者手动调用 <code>xlua.hotfix(GO,"OnDestroy")</code>
+断开引用，防止内存泄漏。</p></li>
+</ul>
+<h2 id="语言特性对性能的影响">语言特性对性能的影响</h2>
+<ul>
+<li><strong>委托与事件</strong>：如上所述，C#
+委托在增删回调时会复制列表，事件订阅过多会拖慢性能。对于热路径或大量订阅，考虑采用自定义事件系统或静态回调列表以避免频繁复制。</li>
+<li><strong>反射</strong>：反射是一项非常昂贵的操作，要在性能敏感场合尽量避免。必要时可缓存反射得到的
+<code>MethodInfo</code>/<code>PropertyInfo</code>，或者使用
+<code>Delegate</code>、<code>Expression</code> 等方式预编译调用。记住
+IL2CPP 不支持运行时动态生成代码（如
+<code>Expression.Compile()</code>、<code>IL.Emit</code>），所以优化时优先考虑委托或原生写法。</li>
+<li><strong>GC 与内存分配</strong>：Unity
+的垃圾收集分两代，需要关注分配量。经常会在 Profiler 中看到的
+<strong>GC.Alloc</strong>
+源头包括：循环中新建对象、字符串连接、LINQ、闭包、装箱以及 UI
+动态生成等。优化要点是<strong>减少分配次数</strong>：使用对象池、复用集合（<code>List.Clear()</code>
+循环复用）、避免频繁 <code>string</code> 拼接（可用
+<code>StringBuilder</code>）、慎用
+LINQ（会产生临时对象）。例如，每帧产生的垃圾越少，GC
+越不频繁，帧率越稳定。</li>
+<li><strong>LINQ 和 lambda</strong>：LINQ 查询和 <code>new</code>
+表达式常创建新对象；Lambda 捕获也会分配闭包实例。对
+<strong>闭包</strong>
+来说，如果引用的是局部或实例变量，则会分配；引用静态变量则不会。避免高频场景下使用这些特性。</li>
+<li><strong>循环遍历</strong>：在 Unity 旧版本中，<code>foreach</code>
+可能会因生成枚举器而装箱导致 GC。推荐对简单集合使用
+<code>for(int i=0; i&lt;list.Count; i++)</code>，并将 <code>Count</code>
+缓存到局部变量，降低开销。</li>
+<li><strong>方法调用开销</strong>：C#
+的虚方法调用比静态调用开销略高。对少量但频繁调用的简单方法，可考虑使用
+<code>sealed</code> 类、<code>static</code> 方法或
+<code>[MethodImpl(MethodImplOptions.AggressiveInlining)]</code>（在
+IL2CPP 中可启用 C++
+级内联）来减少调用开销。此外，上述列表遍历示例也显示，多层属性和方法调用会带来多重函数调度成本。</li>
+<li><strong>数据结构</strong>：少用二维或多维 C#
+数组（<code>type[,]</code>），因为其内部访问需要额外函数开销，性能远低于交错数组（<code>type[][]</code>）。对性能敏感的大量数据使用，应尽量使用一维数组或简单结构。</li>
+</ul>
+<h2 id="mono-与-il2cpp-的差异">Mono 与 IL2CPP 的差异</h2>
+<ul>
+<li><strong>编译方式</strong>：Mono
+后端使用JIT（即时编译）在运行时将IL编译成本机码，灵活支持热更新和反射；IL2CPP
+则是 AOT（提前编译）将 C# 转换为 C++ 再编译，生成本地机器码。IL2CPP
+去除了运行时的JIT开销，对多线程和移动平台（尤其是iOS）具有性能和兼容优势。在移动端实践中，IL2CPP
+通常比 Mono 运行更快（但编译时间长、包体更大），因此生产环境建议使用
+IL2CPP，开发阶段可用 Mono 加快迭代。iOS 平台强制要求使用 IL2CPP（禁止
+JIT），Android 平台支持 Mono 32 位和 IL2CPP 64 位。</li>
+<li><strong>性能差异</strong>：总体上，IL2CPP
+经预编译优化后执行效率更高。一些论坛和测评也发现 IL2CPP
+在低端机型上表现更好，但实际性能还需根据具体场景基准测试（部分特殊情况中
+IL2CPP 可能略慢）。需要注意，IL2CPP 的 AOT
+特性限制了某些动态功能：如动态生成代码（<code>IL.Emit</code>、<code>Expression.Compile</code>）不可用，反射性能与
+Mono 相近但缺少 JIT 优化。</li>
+<li><strong>调优技巧</strong>：在 IL2CPP
+下，<strong>虚调用去虚拟化</strong>可以带来性能提升。将没有继承需求的类或方法标记为
+<code>sealed</code>，可让编译器使用直接调用代替虚表调用。从 Unity 2020.2
+起，还可以用
+<code>[MethodImpl(MethodImplOptions.AggressiveInlining)]</code> 强制 C++
+端内联，以减少函数调用和参数复制成本。对于性能敏感的数学函数，可考虑内联或手写高效版本。相比之下，Mono
+模式下可用 Hot Reload、原生调试，但无法在 iOS
+上运行，仅建议用于快速迭代测试。</li>
+</ul>
+<h2 id="性能分析工具与方法">性能分析工具与方法</h2>
+<ul>
+<li><p><strong>Unity
+Profiler</strong>：在编辑器或真机（必须为开发版）上运行性能分析。使用
+<strong>CPU Usage</strong>
+模块查看各部分开销，按类别（渲染、脚本、物理、GC等）归纳每帧时间消耗。选择某一帧后，在
+Profiler 的 “详细信息” 面板里切换 <strong>Timeline</strong> 和
+<strong>Hierarchy</strong> 视图：Timeline
+显示该帧内各线程的时间轴，可对比主线程与作业线程的并行关系；Hierarchy
+则以层次结构列出所有函数调用及耗时，默认按耗时降序，有助于快速定位耗时热点。</p></li>
+<li><p><strong>深度性能剖析</strong>：启用 <strong>Deep Profiling
+Support</strong> 后，Profiler 会对所有脚本函数进行采样，而非仅限
+ProfilerMarker
+标记的代码。这使得启动等阶段的分析更全面，但会带来额外开销。一般先在核心流程确认大致瓶颈，再在必要时对某几个函数启用深度剖析。分析时可在
+Profiler 视图中点击 <strong>GC Alloc</strong>
+等条目，查看调用堆栈，找出垃圾产生的源头。</p></li>
+<li><p><strong>Timeline视图</strong>：在 Profiler CPU 模块的 Timeline
+视图中，可以观察每帧各线程的活动分布。比如可直观看到主线程在等待 VSync
+或 GPU 时间的情况，也可在作业系统场景下查看 Worker
+线程何时被调度。熟悉常见的 Profiler 标签（如
+<code>Scripts.Update</code>, <code>Physics.Simulate</code>,
+<code>VSync</code> 等）有助于判断开销归属。</p></li>
+<li><p><strong>ProfilerMarker</strong>：在关键代码段使用
+<code>Unity.Profiling.ProfilerMarker</code> 标记，可以在 Profiler 的
+Timeline/Hierarchy 中显示自定义名称，方便细粒度分析。例如：</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> ProfilerMarker myMarker = <span class="keyword">new</span> ProfilerMarker(<span class="string">"CustomLogic"</span>);</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">CustomLogic</span>(<span class="params"></span>)</span> &#123;</span><br><span class="line">    <span class="keyword">using</span> (myMarker.Auto()) &#123;</span><br><span class="line">        <span class="comment">// 性能热点代码</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+<li><p><strong>其他工具</strong>：结合 <strong>Timeline
+Editor</strong>（帧捕获工具）分析渲染、GPU 等开销。使用 <strong>Memory
+Profiler</strong> 查看内存泄漏。对于网络或
+IO，也可使用专门的分析工具。但总体原则是：<strong>先用 Profile
+找出瓶颈所在，再针对性优化</strong>。</p></li>
+</ul>
+<h1 id="渲染优化cpu端">渲染优化（CPU端）</h1>
+<h2 id="总体架构概览">总体架构概览</h2>
+<p>Unity 使用基于 Component 的实体系统（GameObject +
+Component）组织场景中的渲染对象。典型的渲染对象由以下组件组成：</p>
+<ul>
+<li><code>Transform</code>：提供位置、旋转、缩放。</li>
+<li><code>MeshFilter</code>：持有渲染的 <code>Mesh</code> 数据。</li>
+<li><code>MeshRenderer</code>：将网格通过材质渲染到屏幕上。</li>
+</ul>
+<p>从 2018.1 起，Unity 支持 Scriptable Render Pipeline（SRP），替代
+Built-in 渲染流程。SRP 将渲染控制权下放给开发者（通过 C# 实现的
+<code>RenderPipeline</code> 和
+<code>RenderPipelineAsset</code>），但底层提交仍由 C++ 实现完成（如
+GfxDevice）。</p>
+<h2 id="渲染对象的分类与处理规则">渲染对象的分类与处理规则</h2>
+<p>Unity 中渲染对象的处理分为几个关键分类维度：</p>
+<h3 id="静态-vs-动态">1. 静态 vs 动态</h3>
+<ul>
+<li>通过 <code>GameObject.isStatic</code> 标志决定是否为静态物体。</li>
+<li>静态物体可参与 静态合批（Static
+Batching），在构建或运行时将多个对象合并为一个网格，大幅减少 Draw
+Call。</li>
+<li>动态物体可使用 <strong>动态合批（Dynamic
+Batching）</strong>（受限条件：顶点属性总数 &lt; 900，不能使用多
+Pass）。</li>
+</ul>
+<p>底层静态合批由 C++ 层的 <code>StaticBatchingUtility</code>
+负责，在构建时生成合并网格，并打包成 <code>StaticBatchRoot</code>
+节点，运行时通过 <code>StaticBatchRenderer</code> 实现直接渲染。</p>
+<h3 id="渲染队列renderqueue">2. 渲染队列（RenderQueue）</h3>
+<ul>
+<li><p>决定绘制顺序，影响透明度处理。</p></li>
+<li><p>通常划分为：</p>
+<ul>
+<li>0–2500：不透明（Opaque）</li>
+<li>2501–3000：AlphaTest</li>
+<li>3001–5000：透明（Transparent）</li>
+</ul></li>
+</ul>
+<p>底层渲染队列由材质的 <code>shader.renderQueue</code> 决定，在
+<code>Material::ComputeRenderQueueWithOffset()</code> 中与
+<code>SubShader</code> 的默认值合并处理。</p>
+<h3 id="渲染层sortinglayer-orderinlayer">3. 渲染层（SortingLayer +
+OrderInLayer）</h3>
+<ul>
+<li>主要用于 2D 渲染排序控制。</li>
+</ul>
+<p>对应的底层实现见 <code>Renderer::m_SortingLayerID</code> 和
+<code>m_SortingOrder</code>，在渲染排序中通过
+<code>GetFinalSortOrder()</code> 函数与摄像机参数一起参与排序逻辑。</p>
+<h3 id="srp-分类流程以-urp-为例">4. SRP 分类流程（以 URP 为例）</h3>
+<p>在 URP 中分类逻辑主要集中在 <code>ForwardRenderer</code> 的
+<code>Setup()</code> 和 <code>Render()</code> 中：</p>
+<ul>
+<li>使用 <code>ScriptableCullingParameters</code>
+对可见对象进行剔除（Frustum Culling + Occlusion Culling）。</li>
+<li>结果是 <code>CullingResults.visibleRenderersList</code>。</li>
+<li>在 <code>DrawRenderers</code> 时，传入
+<code>FilteringSettings</code> 控制 Layer、Queue 等筛选。</li>
+<li>使用 <code>SortingSettings</code> 指定排序方式（如 opaque
+前向，transparent 后向）。</li>
+</ul>
+<h2 id="渲染前的处理流程">渲染前的处理流程</h2>
+<p>Unity 渲染对象在通过图形 API（如
+DirectX/Metal/Vulkan）提交前经历如下处理流程：</p>
+<h3 id="culling-剔除">1. Culling 剔除</h3>
+<ul>
+<li>通过 <code>CullResults.Cull()</code> 进行视锥体剔除（Frustum
+Culling）。</li>
+<li>可启用遮挡剔除（Occlusion Culling），使用预计算的遮挡体（PVS）或动态
+GPU 遮挡（如 Umbra）。</li>
+<li>剔除逻辑底层通过 <code>SceneCulling.cpp</code> 和
+<code>Cull.cpp</code> 中的 SIMD 加速处理 BoundingBox 与 Frustum
+的包围盒交集检测。</li>
+</ul>
+<h3 id="filtering-筛选">2. Filtering 筛选</h3>
+<ul>
+<li>使用 <code>FilteringSettings</code>
+控制：LayerMask、RenderQueueRange、ShaderTag、MotionVector。</li>
+<li>对应底层结构为 <code>FilterResults</code>，通过
+<code>Renderer::Passes</code> 与 <code>ShaderTagId</code> 做匹配。</li>
+</ul>
+<h3 id="sorting-排序">3. Sorting 排序</h3>
+<ul>
+<li><p>使用 <code>SortingSettings</code> 控制排序规则：</p>
+<ul>
+<li><code>CommonOpaque</code>：按材质和状态排序，减少状态切换。</li>
+<li><code>CommonTransparent</code>：按摄像机距离排序（后向前避免混合错误）。</li>
+</ul></li>
+<li><p>实现上使用 <code>DrawObjectSortFunctions.cpp</code>
+中的排序函数对 RenderList 排序。</p></li>
+</ul>
+<h3 id="state-setup-渲染状态准备">4. State Setup 渲染状态准备</h3>
+<ul>
+<li>包括：设置 Camera matrices、Lighting、Lightmap、Global Shader
+Constants。</li>
+<li>若开启 SRP Batcher：所有材质 Uniform 常量使用统一大 Buffer
+上传，减少 CBuffer 切换。</li>
+<li>渲染状态在 C++ 中使用 <code>SetGlobalConstantBuffer</code> 和
+<code>SetPassGlobalState()</code> 设置，最终提交
+<code>DrawCallCommand</code>。</li>
+</ul>
+<h3 id="合批与实例化batching-instancing">5. 合批与实例化（Batching &amp;
+Instancing）</h3>
+<ul>
+<li>静态合批：提前合并网格，减少 Draw Call，由
+<code>StaticBatchRenderer</code> 提交索引偏移进行绘制。</li>
+<li>动态合批：CPU 合并顶点后提交。由 <code>DynamicBatching.cpp</code>
+实现，运行时构建临时 VBO/IBO。</li>
+<li>GPU Instancing：相同材质的多个对象通过
+<code>Material.enableInstancing</code> 一次性绘制。</li>
+<li>SRP Batcher：使用固定格式统一结构的 UniformBuffer 进行批处理。</li>
+</ul>
+<p>底层由 <code>BatchRendererGroup.cpp</code> 调用
+<code>DrawMeshInstanced()</code> 或
+<code>DrawInstancedProcedural()</code> 实现。</p>
+<h3 id="commandbuffer-构建与提交">6. CommandBuffer 构建与提交</h3>
+<ul>
+<li>所有绘制命令封装为 <code>CommandBuffer</code>（C#）或
+<code>ScriptableRenderContext</code>。</li>
+<li>最终调用 <code>context.Submit()</code>，封装为
+<code>RenderCommandBuffer</code> 结构，提交给 C++ GfxDevice。</li>
+<li>GfxDevice（如 GfxDeviceD3D11/GfxDeviceMetal）最终翻译为底层 API
+DrawCall 并提交 GPU Command Queue。</li>
+</ul>
+<h2 id="优化目标与性能考虑">优化目标与性能考虑</h2>
+<table>
+<colgroup>
+<col style="width: 2%" />
+<col style="width: 31%" />
+<col style="width: 65%" />
+</colgroup>
+<thead>
+<tr>
+<th>阶段</th>
+<th>目的</th>
+<th>优化方法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>剔除</td>
+<td>减少不必要渲染对象</td>
+<td>利用 Job System 多线程剔除，使用 GPU Occlusion Culling</td>
+</tr>
+<tr>
+<td>筛选</td>
+<td>精准筛选目标对象</td>
+<td>使用 FilteringSettings 限制 Layer/Queue</td>
+</tr>
+<tr>
+<td>排序</td>
+<td>降低 GPU Pipeline flush</td>
+<td>Opaque 优先按材质排序，Transparent 后向前避免混合错误</td>
+</tr>
+<tr>
+<td>合批</td>
+<td>减少 Draw Call 数</td>
+<td>静态合批/动态合批/GPU Instancing/SRP Batcher</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>减少 CBuffer 绑定</td>
+<td>启用 SRP Batcher（每材质使用统一 buffer）</td>
+</tr>
+<tr>
+<td>提交</td>
+<td>提高 CPU-GPU 并发效率</td>
+<td>使用 CommandBuffer 封装所有命令后统一提交</td>
+</tr>
+</tbody>
+</table>
+<h2 id="关键源码位置与类">关键源码位置与类</h2>
+<table>
+<colgroup>
+<col style="width: 12%" />
+<col style="width: 87%" />
+</colgroup>
+<thead>
+<tr>
+<th>功能</th>
+<th>源码/类</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Renderer 渲染组件</td>
+<td><code>UnityEngine.MeshRenderer</code>、<code>SkinnedMeshRenderer</code></td>
+</tr>
+<tr>
+<td>剔除</td>
+<td><code>CullResults</code>、<code>ScriptableCullingParameters</code>，底层见
+<code>Cull.cpp</code></td>
+</tr>
+<tr>
+<td>渲染指令</td>
+<td><code>ScriptableRenderContext.DrawRenderers()</code>，底层翻译为
+<code>RenderCommandBuffer</code></td>
+</tr>
+<tr>
+<td>批处理</td>
+<td><code>BatchRendererGroup</code>、SRP
+Batcher（<code>RenderGraph</code>）</td>
+</tr>
+<tr>
+<td>GPU Instancing</td>
+<td><code>Material.enableInstancing = true</code>；Shader 中使用
+<code>UNITY_INSTANCING_CBUFFER_START/END</code> 宏</td>
+</tr>
+<tr>
+<td>SRP 管线主类</td>
+<td><code>RenderPipeline</code>,
+<code>RenderPipelineAsset</code>，内部走
+<code>RenderPipelineManager.DoRenderLoop_Internal()</code> 调度</td>
+</tr>
+</tbody>
+</table>
+<h1 id="网络优化">网络优化</h1>
+<h2 id="网络通信整体架构概览">网络通信整体架构概览</h2>
+<p>在大型多人联网游戏中，通常采用如下架构：</p>
+<ul>
+<li><strong>客户端：Unity + C# + Xlua</strong></li>
+<li><strong>服务端：C++/Java/Golang 等高性能语言</strong></li>
+<li><strong>通信协议：TCP 为主，部分 UDP 或 WebSocket
+用于推送、心跳等</strong></li>
+<li><strong>数据格式：ProtoBuf / FlatBuffers / 自定义二进制协议 /
+JSON（调试）</strong></li>
+</ul>
+<p>客户端通信模块的职责包括：</p>
+<ul>
+<li>创建 socket 并维护连接</li>
+<li>数据收发与缓冲管理</li>
+<li>协议解析、打包、粘包处理</li>
+<li>异常重连与心跳保活</li>
+</ul>
+<h2 id="socket-通信底层流程以-tcp-为例">Socket 通信底层流程（以 TCP
+为例）</h2>
+<h3 id="socket-创建与连接建立">Socket 创建与连接建立</h3>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Socket socket = <span class="keyword">new</span> Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);</span><br><span class="line">socket.Connect(ip, port);</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>AddressFamily.InterNetwork</code>: 使用 IPv4 协议</li>
+<li><code>SocketType.Stream</code>: 流式 socket，TCP</li>
+<li><code>ProtocolType.Tcp</code>: 明确协议</li>
+</ul>
+<h3 id="设置-socket-参数可优化性能">设置 Socket 参数（可优化性能）</h3>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">socket.NoDelay = <span class="literal">true</span>; <span class="comment">// 关闭 Nagle 算法，降低延迟</span></span><br><span class="line">socket.SendBufferSize = <span class="number">64</span> * <span class="number">1024</span>;</span><br><span class="line">socket.ReceiveBufferSize = <span class="number">64</span> * <span class="number">1024</span>;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p><code>SendBufferSize</code> 和
+<code>ReceiveBufferSize</code>：设置的是 <strong>操作系统内核的 socket
+缓冲区大小</strong>，而不是应用层 buffer。这影响了 socket
+层对数据包的缓存能力。</p>
+</blockquote>
+<blockquote>
+<p><code>NoDelay = true</code> 用于关闭 Nagle
+算法（详见后文），避免发送小包延迟。</p>
+</blockquote>
+<h3 id="建立连接过程tcp-三次握手">建立连接过程（TCP 三次握手）</h3>
+<ol type="1">
+<li>客户端发送 SYN</li>
+<li>服务端返回 SYN + ACK</li>
+<li>客户端发送 ACK 确认</li>
+</ol>
+<h2 id="网络数据发送流程">网络数据发送流程</h2>
+<h3 id="发送数据send">发送数据（Send）</h3>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">socket.Send(buffer, offset, length, SocketFlags.None);</span><br></pre></td></tr></table></figure>
+<ul>
+<li>底层实际调用 OS 的 <code>send</code> 函数，将数据写入 socket 的
+<strong>发送缓冲区</strong>。</li>
+<li>若缓冲区满，会阻塞或返回未写完的字节数（异步 IO 会挂起等待）。</li>
+</ul>
+<h3 id="数据组织">数据组织</h3>
+<ul>
+<li>数据结构通常为：<code>[协议头(长度+类型)] + [消息体]</code></li>
+<li>避免频繁申请大数组，使用 <code>ArrayPool&lt;byte&gt;</code>
+或环形缓冲池复用</li>
+<li>批量打包小数据，避免碎片化，提高发送效率</li>
+</ul>
+<h3 id="nagle-算法说明">Nagle 算法说明</h3>
+<p>Nagle
+算法的目的：<strong>减少网络中小包数量，提高带宽利用率</strong>。</p>
+<p>原理：</p>
+<ul>
+<li>当 socket 中存在未确认的数据包时，暂不发送新的小包，等待 ACK
+后再发。</li>
+</ul>
+<p>缺点：</p>
+<ul>
+<li>会引起 40~200ms 的发送延迟，尤其在 turn-based 游戏中尤为明显。</li>
+</ul>
+<p>建议：</p>
+<ul>
+<li>默认关闭（<code>socket.NoDelay = true</code>）提升实时性</li>
+</ul>
+<h2 id="网络数据接收流程">网络数据接收流程</h2>
+<h3 id="接收数据receive">接收数据（Receive）</h3>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">socket.Receive(buffer, offset, size, SocketFlags.None);</span><br></pre></td></tr></table></figure>
+<ul>
+<li>数据从 OS 的内核 <strong>接收缓冲区</strong> 拷贝到应用层
+buffer。</li>
+<li>应用层通常使用独立线程 / 异步回调持续监听数据。</li>
+</ul>
+<h3 id="粘包-拆包问题">粘包 / 拆包问题</h3>
+<ul>
+<li><p>TCP
+是<strong>面向字节流</strong>的协议，没有消息边界，需自己处理粘包/半包：</p>
+<ul>
+<li>协议设计中加 <code>Length</code> 字段（前 4 字节等）来解包</li>
+<li>自己维护缓存区，按 length 解析完整消息</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="性能优化建议">性能优化建议</h2>
+<h3 id="arraypool-的底层实现详解">ArrayPool 的底层实现详解</h3>
+<p><code>System.Buffers.ArrayPool&lt;T&gt;</code> 是 .NET
+为了避免频繁创建和销毁大数组、减少 GC 压力而提供的一种数组租赁机制。</p>
+<p>其默认实现为：<code>System.Buffers.DefaultArrayPool&lt;T&gt;</code>，核心结构如下：</p>
+<ul>
+<li><p>内部结构：</p>
+<ul>
+<li>通过 <code>T[][] _buckets</code>
+管理多个“桶”，每个桶存储特定大小的数组。</li>
+<li>每个桶对应一种标准容量（例如 16, 32, 64, ..., 最大支持到 1024*1024
+级别）。</li>
+<li>每个桶由一个 <code>LockedStack&lt;T[]&gt;</code>（或
+<code>ConcurrentBag</code>）管理，支持线程安全的数组归还与租赁。</li>
+</ul></li>
+<li><p>关键逻辑：</p>
+<ul>
+<li><p><code>Rent(int minimumLength)</code>：</p>
+<ul>
+<li>查找大于等于 <code>minimumLength</code>
+的最近标准桶；若有可用数组直接返回，否则新建一个。</li>
+<li>若请求长度大于 <code>MaximumBufferSize</code>，直接分配新数组。</li>
+</ul></li>
+<li><p><code>Return(T[] array, bool clearArray = false)</code>：</p>
+<ul>
+<li>根据数组长度判断归还到哪个桶；若桶已满，则该数组被抛弃（等待
+GC）。</li>
+<li><code>clearArray = true</code> 会调用 <code>Array.Clear()</code>
+清空内容，避免引用保留导致的内存泄漏。</li>
+</ul></li>
+</ul></li>
+<li><p>性能特性：</p>
+<ul>
+<li>大量减少 <code>byte[]</code>, <code>int[]</code>
+等大数组频繁分配导致的 LOH（大对象堆）GC 开销。</li>
+<li>使用线程本地栈优化热路径性能，避免锁竞争。</li>
+<li>分桶策略有效避免数组碎片和大小不均。</li>
+</ul></li>
+<li><p>使用建议：</p>
+<ul>
+<li>配合 <code>Span&lt;T&gt;</code> 或 <code>Memory&lt;T&gt;</code>
+使用更高效。</li>
+<li>网络通信中，推荐作为接收缓冲区、序列化缓存池等。</li>
+</ul></li>
+</ul>
+<p>优势总结：<strong>复用大数组减少
+GC，提升网络中数据处理性能，降低内存抖动。</strong></p>
+<h3 id="span-memory-的底层设计结构">Span / Memory 的底层设计结构</h3>
+<h4 id="span">Span：</h4>
+<ul>
+<li><p><code>Span&lt;T&gt;</code> 是一种轻量结构体（ref
+struct），用于表示托管内存中的一段连续区域（如数组、栈上内存、堆上内存的一部分）。</p></li>
+<li><p>特点：</p>
+<ul>
+<li>无堆分配、无 GC</li>
+<li>支持 <code>Slice()</code>、<code>CopyTo()</code> 等高效操作</li>
+<li><strong>不能存储在字段中或捕获到 lambda
+中</strong>，因为它可能指向栈上内存</li>
+</ul></li>
+<li><p>底层结构：</p>
+<ul>
+<li>包含：<code>ref T _pointer</code> 和 <code>int _length</code></li>
+<li>JIT 会将对 Span 的访问转成指针偏移 + 边界检查</li>
+</ul></li>
+</ul>
+<h4 id="memory">Memory：</h4>
+<ul>
+<li><p><code>Memory&lt;T&gt;</code> 与 <code>Span&lt;T&gt;</code>
+类似，但是可存储的引用类型</p></li>
+<li><p>特点：</p>
+<ul>
+<li>可作为字段、异步传递</li>
+<li>内部包含一个引用和偏移信息</li>
+<li>可通过 <code>.Span</code> 转换成 <code>Span&lt;T&gt;</code>
+使用</li>
+</ul></li>
+</ul>
+<h4 id="应用场景">应用场景：</h4>
+<ul>
+<li>使用 <code>ArrayPool</code> + <code>Span&lt;byte&gt;</code> 构建零
+GC 的序列化系统</li>
+<li>异步函数中使用 <code>Memory&lt;T&gt;</code>
+传递缓存，避免数组拷贝</li>
+</ul>
+<h2 id="c-vs-cc-网络通信性能对比基于-xlua-项目">C# vs C/C++
+网络通信性能对比（基于 Xlua 项目）</h2>
+<h3 id="场景说明">场景说明</h3>
+<p>在 C# + Xlua 结构中，如果将 Socket 网络通信逻辑移到 C/C++
+层，有如下潜在性能提升：</p>
+<h3 id="提升点分析">提升点分析</h3>
+<table>
+<colgroup>
+<col style="width: 11%" />
+<col style="width: 42%" />
+<col style="width: 46%" />
+</colgroup>
+<thead>
+<tr>
+<th>项目</th>
+<th>使用 C# 实现</th>
+<th>使用 C/C++ 实现</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GC 压力</td>
+<td>高（byte[]频繁回收）</td>
+<td>低（自行管理内存）</td>
+</tr>
+<tr>
+<td>字节操作性能</td>
+<td>中（需借助 <code>Span</code>, <code>BinaryWriter</code>）</td>
+<td>高（直接指针操作）</td>
+</tr>
+<tr>
+<td>多线程</td>
+<td>受限于托管线程模型</td>
+<td>可使用原生多线程</td>
+</tr>
+<tr>
+<td>跨 Lua 调用</td>
+<td>Xlua 调用 C# 较频繁</td>
+<td>可通过 P/Invoke 减少 Lua ↔︎ C# 跳转</td>
+</tr>
+<tr>
+<td>数据结构复用</td>
+<td>需使用 <code>ArrayPool</code> 或自建池</td>
+<td>malloc/free + buffer pool 灵活控制</td>
+</tr>
+<tr>
+<td>CPU 指令优化</td>
+<td>不可控</td>
+<td>可用 SIMD、zero-copy、batch send 等手段</td>
+</tr>
+</tbody>
+</table>
+<h3 id="场景适配建议">场景适配建议</h3>
+<ul>
+<li>通信极致高频（如 20ms 一帧、RTS 推送）推荐用 C/C++</li>
+<li>若瓶颈在 IO 线程与序列化，可尝试 C# 调用原生插件（如 FlatBuffers C
+API）</li>
+<li>若逻辑复杂不宜重构，仍可在 C# 中精细优化 buffer 分配与内存布局</li>
+</ul>
+<h2 id="附加建议高并发优化策略">附加建议：高并发优化策略</h2>
+<ul>
+<li><p>使用异步 I/O (<code>SocketAsyncEventArgs</code>) 或
+IOCP（Windows）提升吞吐</p></li>
+<li><p>网络协议压缩（Snappy / Zstd）降低传输成本，
+但需要注意：加密后是高熵（数据重复度低）数据，压缩无意义，所有需要先压缩，再加密。否则压缩毫无意义，反而增加开销</p></li>
+<li><p>心跳机制定时 + RTT 检测，动态调整重传超时（RTO）</p></li>
+<li><p>使用双缓冲避免线程读写冲突</p></li>
+<li><p>将关键协议划分为：</p>
+<ul>
+<li>高优先级（心跳、同步帧）</li>
+<li>中优先级（状态同步）</li>
+<li>低优先级（日志、战报） 实现分通道异步发送（多队列）</li>
+</ul></li>
+</ul>
+<h1 id="参考">参考</h1>
+<ul>
+<li><a href="https://docs.unity3d.com/Manual/analysis.html" target="_blank" rel="noopener">Unity
+Manual</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/%E4%BC%98%E5%8C%96/" rel="tag"><i class="fa fa-tag"></i> 优化</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2024/04/24/Unity/Optimization/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96-%E5%9F%BA%E7%A1%80/" rel="next" title="性能优化-基础">
+                  <i class="fa fa-chevron-left"></i> 性能优化-基础
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2024/11/07/%E7%90%86%E8%B4%A2/%E7%90%86%E8%B4%A2%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/" rel="prev" title="理财基础知识">
+                  理财基础知识 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#闪存优化"><span class="nav-number">1.</span> <span class="nav-text">闪存优化</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#闪存结构和文件操作流程"><span class="nav-number">1.1.</span> <span class="nav-text">闪存结构和文件操作流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#内存映射memory-mapping机制及其优势"><span class="nav-number">1.2.</span> <span class="nav-text">内存映射（Memory
+Mapping）机制及其优势</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#序列化serialization"><span class="nav-number">1.3.</span> <span class="nav-text">序列化（Serialization）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#序列化的概念"><span class="nav-number">1.3.1.</span> <span class="nav-text">序列化的概念</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#序列化数据结构"><span class="nav-number">1.3.2.</span> <span class="nav-text">序列化数据结构</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#serializedfileheader"><span class="nav-number">1.3.2.1.</span> <span class="nav-text">1. SerializedFileHeader</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#serializedtype"><span class="nav-number">1.3.2.2.</span> <span class="nav-text">2. SerializedType</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#typetree"><span class="nav-number">1.3.2.3.</span> <span class="nav-text">3. TypeTree</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#typetreenode"><span class="nav-number">1.3.2.4.</span> <span class="nav-text">4. TypeTreeNode</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#objectinfo"><span class="nav-number">1.3.2.5.</span> <span class="nav-text">5. ObjectInfo</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#localserializedobjectidentifier"><span class="nav-number">1.3.2.6.</span> <span class="nav-text">6.
+LocalSerializedObjectIdentifier</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#fileidentifier"><span class="nav-number">1.3.2.7.</span> <span class="nav-text">7. FileIdentifier</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#serializedfile文件的结构"><span class="nav-number">1.3.2.8.</span> <span class="nav-text">8. SerializedFile文件的结构</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#编辑器-yaml-模式与打包二进制格式的转换关系"><span class="nav-number">1.3.3.</span> <span class="nav-text">编辑器 YAML
+模式与打包二进制格式的转换关系</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#assetbundle文件结构"><span class="nav-number">1.3.4.</span> <span class="nav-text">AssetBundle文件结构</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#header"><span class="nav-number">1.3.4.1.</span> <span class="nav-text">1. Header</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#storageblock"><span class="nav-number">1.3.4.2.</span> <span class="nav-text">2. StorageBlock</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#node"><span class="nav-number">1.3.4.3.</span> <span class="nav-text">3. Node</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#bundle文件结构图"><span class="nav-number">1.3.4.4.</span> <span class="nav-text">4. Bundle文件结构图</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#addressables"><span class="nav-number">1.3.5.</span> <span class="nav-text">Addressables</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#addressables-的主要组件"><span class="nav-number">1.3.5.1.</span> <span class="nav-text">Addressables 的主要组件</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#addressables-与-assetbundle-的区别"><span class="nav-number">1.3.5.2.</span> <span class="nav-text">Addressables 与 AssetBundle
+的区别</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#常用-api"><span class="nav-number">1.3.5.3.</span> <span class="nav-text">常用 API</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#构建与热更新使用流程示例"><span class="nav-number">1.3.5.4.</span> <span class="nav-text">构建与热更新使用流程示例</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#常用资源"><span class="nav-number">1.4.</span> <span class="nav-text">常用资源</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#核心资源类型划分与内存模型"><span class="nav-number">1.4.1.</span> <span class="nav-text">核心资源类型划分与内存模型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#资源导入器-importer-与转换管线"><span class="nav-number">1.4.2.</span> <span class="nav-text">资源导入器 Importer
+与转换管线</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#nativeobject-内存结构分析"><span class="nav-number">1.4.3.</span> <span class="nav-text">NativeObject 内存结构分析</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#内存"><span class="nav-number">2.</span> <span class="nav-text">内存</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#pc-内存架构与管理机制"><span class="nav-number">2.1.</span> <span class="nav-text">PC 内存架构与管理机制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#架构特性"><span class="nav-number">2.1.1.</span> <span class="nav-text">架构特性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#操作系统内存管理"><span class="nav-number">2.1.2.</span> <span class="nav-text">操作系统内存管理</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#手机内存硬件与系统层"><span class="nav-number">2.2.</span> <span class="nav-text">手机内存硬件与系统层</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#操作系统的内存申请使用与释放流程"><span class="nav-number">2.2.1.</span> <span class="nav-text">操作系统的内存申请、使用与释放流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ios-内存架构与管理机制"><span class="nav-number">2.2.2.</span> <span class="nav-text">iOS 内存架构与管理机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#android-内存架构与管理机制"><span class="nav-number">2.2.3.</span> <span class="nav-text">Android 内存架构与管理机制</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#unity引擎内存结构与使用方式"><span class="nav-number">2.3.</span> <span class="nav-text">Unity引擎内存结构与使用方式</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#unity-内存划分详解"><span class="nav-number">2.3.1.</span> <span class="nav-text">Unity 内存划分详解</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#unity-移动端内存行为"><span class="nav-number">2.3.2.</span> <span class="nav-text">Unity 移动端内存行为</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#unity-开发中的内存优化技巧"><span class="nav-number">2.4.</span> <span class="nav-text">Unity 开发中的内存优化技巧</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#纹理优化"><span class="nav-number">2.4.1.</span> <span class="nav-text">纹理优化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#网格与渲染优化"><span class="nav-number">2.4.2.</span> <span class="nav-text">网格与渲染优化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#动画系统优化"><span class="nav-number">2.4.3.</span> <span class="nav-text">动画系统优化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#addressables-使用技巧"><span class="nav-number">2.4.4.</span> <span class="nav-text">Addressables 使用技巧</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#gc与堆内存优化"><span class="nav-number">2.4.5.</span> <span class="nav-text">GC与堆内存优化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#工具链"><span class="nav-number">2.4.6.</span> <span class="nav-text">工具链</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#平台差异与特别注意事项"><span class="nav-number">2.5.</span> <span class="nav-text">平台差异与特别注意事项</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#android-特有限制"><span class="nav-number">2.5.1.</span> <span class="nav-text">Android 特有限制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ios-特性优化"><span class="nav-number">2.5.2.</span> <span class="nav-text">iOS 特性优化</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#代码优化cpu时间"><span class="nav-number">3.</span> <span class="nav-text">代码优化(CPU时间)</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#常见c脚本瓶颈及优化建议"><span class="nav-number">3.1.</span> <span class="nav-text">常见C#脚本瓶颈及优化建议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#xlua脚本性能优化"><span class="nav-number">3.2.</span> <span class="nav-text">XLua脚本性能优化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#语言特性对性能的影响"><span class="nav-number">3.3.</span> <span class="nav-text">语言特性对性能的影响</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#mono-与-il2cpp-的差异"><span class="nav-number">3.4.</span> <span class="nav-text">Mono 与 IL2CPP 的差异</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#性能分析工具与方法"><span class="nav-number">3.5.</span> <span class="nav-text">性能分析工具与方法</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#渲染优化cpu端"><span class="nav-number">4.</span> <span class="nav-text">渲染优化（CPU端）</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#总体架构概览"><span class="nav-number">4.1.</span> <span class="nav-text">总体架构概览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#渲染对象的分类与处理规则"><span class="nav-number">4.2.</span> <span class="nav-text">渲染对象的分类与处理规则</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#静态-vs-动态"><span class="nav-number">4.2.1.</span> <span class="nav-text">1. 静态 vs 动态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#渲染队列renderqueue"><span class="nav-number">4.2.2.</span> <span class="nav-text">2. 渲染队列（RenderQueue）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#渲染层sortinglayer-orderinlayer"><span class="nav-number">4.2.3.</span> <span class="nav-text">3. 渲染层（SortingLayer +
+OrderInLayer）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#srp-分类流程以-urp-为例"><span class="nav-number">4.2.4.</span> <span class="nav-text">4. SRP 分类流程（以 URP 为例）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#渲染前的处理流程"><span class="nav-number">4.3.</span> <span class="nav-text">渲染前的处理流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#culling-剔除"><span class="nav-number">4.3.1.</span> <span class="nav-text">1. Culling 剔除</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#filtering-筛选"><span class="nav-number">4.3.2.</span> <span class="nav-text">2. Filtering 筛选</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sorting-排序"><span class="nav-number">4.3.3.</span> <span class="nav-text">3. Sorting 排序</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#state-setup-渲染状态准备"><span class="nav-number">4.3.4.</span> <span class="nav-text">4. State Setup 渲染状态准备</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#合批与实例化batching-instancing"><span class="nav-number">4.3.5.</span> <span class="nav-text">5. 合批与实例化（Batching &amp;
+Instancing）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#commandbuffer-构建与提交"><span class="nav-number">4.3.6.</span> <span class="nav-text">6. CommandBuffer 构建与提交</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#优化目标与性能考虑"><span class="nav-number">4.4.</span> <span class="nav-text">优化目标与性能考虑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#关键源码位置与类"><span class="nav-number">4.5.</span> <span class="nav-text">关键源码位置与类</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#网络优化"><span class="nav-number">5.</span> <span class="nav-text">网络优化</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#网络通信整体架构概览"><span class="nav-number">5.1.</span> <span class="nav-text">网络通信整体架构概览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#socket-通信底层流程以-tcp-为例"><span class="nav-number">5.2.</span> <span class="nav-text">Socket 通信底层流程（以 TCP
+为例）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#socket-创建与连接建立"><span class="nav-number">5.2.1.</span> <span class="nav-text">Socket 创建与连接建立</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#设置-socket-参数可优化性能"><span class="nav-number">5.2.2.</span> <span class="nav-text">设置 Socket 参数（可优化性能）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#建立连接过程tcp-三次握手"><span class="nav-number">5.2.3.</span> <span class="nav-text">建立连接过程（TCP 三次握手）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#网络数据发送流程"><span class="nav-number">5.3.</span> <span class="nav-text">网络数据发送流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#发送数据send"><span class="nav-number">5.3.1.</span> <span class="nav-text">发送数据（Send）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#数据组织"><span class="nav-number">5.3.2.</span> <span class="nav-text">数据组织</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#nagle-算法说明"><span class="nav-number">5.3.3.</span> <span class="nav-text">Nagle 算法说明</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#网络数据接收流程"><span class="nav-number">5.4.</span> <span class="nav-text">网络数据接收流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#接收数据receive"><span class="nav-number">5.4.1.</span> <span class="nav-text">接收数据（Receive）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#粘包-拆包问题"><span class="nav-number">5.4.2.</span> <span class="nav-text">粘包 &#x2F; 拆包问题</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#性能优化建议"><span class="nav-number">5.5.</span> <span class="nav-text">性能优化建议</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#arraypool-的底层实现详解"><span class="nav-number">5.5.1.</span> <span class="nav-text">ArrayPool 的底层实现详解</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#span-memory-的底层设计结构"><span class="nav-number">5.5.2.</span> <span class="nav-text">Span &#x2F; Memory 的底层设计结构</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#span"><span class="nav-number">5.5.2.1.</span> <span class="nav-text">Span：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#memory"><span class="nav-number">5.5.2.2.</span> <span class="nav-text">Memory：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#应用场景"><span class="nav-number">5.5.2.3.</span> <span class="nav-text">应用场景：</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#c-vs-cc-网络通信性能对比基于-xlua-项目"><span class="nav-number">5.6.</span> <span class="nav-text">C# vs C&#x2F;C++
+网络通信性能对比（基于 Xlua 项目）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#场景说明"><span class="nav-number">5.6.1.</span> <span class="nav-text">场景说明</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#提升点分析"><span class="nav-number">5.6.2.</span> <span class="nav-text">提升点分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#场景适配建议"><span class="nav-number">5.6.3.</span> <span class="nav-text">场景适配建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#附加建议高并发优化策略"><span class="nav-number">5.7.</span> <span class="nav-text">附加建议：高并发优化策略</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考"><span class="nav-number">6.</span> <span class="nav-text">参考</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <img class="site-author-image" itemprop="image" alt="张卫"
+    src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">张卫</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">31</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/zw514159799" title="CSDN &amp;rarr; https:&#x2F;&#x2F;blog.csdn.net&#x2F;zw514159799" rel="noopener" target="_blank"><i class="fa fa-fw fa-csdn"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://github.com/Divad1111?tab=repositories" title="GitHub &amp;rarr; https:&#x2F;&#x2F;github.com&#x2F;Divad1111?tab&#x3D;repositories" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.cnblogs.com/qilezaitu" title="博客园 &amp;rarr; https:&#x2F;&#x2F;www.cnblogs.com&#x2F;qilezaitu" rel="noopener" target="_blank"><i class="fa fa-fw fa-cnblogs"></i>博客园</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://baidu.com/" title="https:&#x2F;&#x2F;baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://bing.com/" title="https:&#x2F;&#x2F;bing.com" rel="noopener" target="_blank">Bing</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2019 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">张卫</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-area-chart"></i>
+    </span>
+      <span class="post-meta-item-text">站点总字数：</span>
+    <span title="站点总字数">542k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">8:13</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.1
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.5.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

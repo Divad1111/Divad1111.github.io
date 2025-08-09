@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="设计需求  解决大量(1000个)HUD创建，更新的性能问题  创建1000个的开销控制在3ms 更新1000个的开销控制在2ms  有多种HUD的排序策略  通过x,y,z排序 通过指定顺序 通过函数排序  支持动静分离 支持三种控件，Image, Text和Slider 需要支持动态图集（可选） 文字支持描边和投影（可选） 支持布局器（可选）">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HUD实现">
+<meta property="og:url" content="http://yoursite.com/2025/01/17/Unity/UI/HUD%E5%AE%9E%E7%8E%B0/index.html">
+<meta property="og:site_name" content="张卫的博客">
+<meta property="og:description" content="设计需求  解决大量(1000个)HUD创建，更新的性能问题  创建1000个的开销控制在3ms 更新1000个的开销控制在2ms  有多种HUD的排序策略  通过x,y,z排序 通过指定顺序 通过函数排序  支持动静分离 支持三种控件，Image, Text和Slider 需要支持动态图集（可选） 文字支持描边和投影（可选） 支持布局器（可选）">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-01-17T08:59:14.000Z">
+<meta property="article:modified_time" content="2025-05-27T00:45:09.239Z">
+<meta property="article:author" content="张卫">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://yoursite.com/2025/01/17/Unity/UI/HUD%E5%AE%9E%E7%8E%B0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>HUD实现 | 张卫的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">张卫的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">Done is better than perfect</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2025/01/17/Unity/UI/HUD%E5%AE%9E%E7%8E%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          HUD实现
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2025-01-17 16:59:14" itemprop="dateCreated datePublished" datetime="2025-01-17T16:59:14+08:00">2025-01-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2025-05-27 08:45:09" itemprop="dateModified" datetime="2025-05-27T08:45:09+08:00">2025-05-27</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="设计需求">设计需求</h1>
+<ol type="1">
+<li><p>解决大量(1000个)HUD创建，更新的性能问题</p>
+<ul>
+<li>创建1000个的开销控制在3ms</li>
+<li>更新1000个的开销控制在2ms</li>
+</ul></li>
+<li><p>有多种HUD的排序策略</p>
+<ul>
+<li>通过x,y,z排序</li>
+<li>通过指定顺序</li>
+<li>通过函数排序</li>
+</ul></li>
+<li><p>支持动静分离</p></li>
+<li><p>支持三种控件，Image, Text和Slider</p></li>
+<li><p>需要支持动态图集（可选）</p></li>
+<li><p>文字支持描边和投影（可选）</p></li>
+<li><p>支持布局器（可选）</p></li>
+</ol>
+<a id="more"></a>
+<h1 id="ugui分析">UGUI分析</h1>
+<p>UGUI的核心类主要包括:</p>
+<h2 id="canvas相关">Canvas相关</h2>
+<ul>
+<li>Canvas: UI渲染的根节点,负责管理UI的渲染顺序、渲染模式等</li>
+<li>CanvasRenderer:
+CanvasRenderer的具体作用是将UI元素转换为可渲染的网格数据，并将其提交到渲染管线中。Unity底层会对这些Quad进行排序和合并，以提高渲染效率，而不是每个UI元素单独渲染。</li>
+<li>CanvasUpdateRegistry: 管理UI元素的重建和更新</li>
+<li>CanvasScaler: 用于控制UI的缩放</li>
+</ul>
+<h2 id="基础组件">基础组件</h2>
+<ul>
+<li>Graphic: 所有可视UI元素的基类,提供基础的渲染功能</li>
+<li>MaskableGraphic: 支持遮罩功能的Graphic基类</li>
+<li>Image: 图片渲染组件</li>
+<li>RawImage: 原始图片渲染组件</li>
+<li>Text: 文本渲染组件</li>
+</ul>
+<h2 id="交互组件">交互组件</h2>
+<ul>
+<li>Selectable: 所有可交互UI元素的基类</li>
+<li>Button: 按钮组件</li>
+<li>Toggle: 开关组件</li>
+<li>Slider: 滑动条组件</li>
+<li>Scrollbar: 滚动条组件</li>
+<li>ScrollRect: 滚动视图组件</li>
+</ul>
+<h2 id="布局系统">布局系统</h2>
+<ul>
+<li>LayoutGroup: 布局组基类</li>
+<li>HorizontalLayoutGroup: 水平布局组件</li>
+<li>VerticalLayoutGroup: 垂直布局组件</li>
+<li>GridLayoutGroup: 网格布局组件</li>
+<li>LayoutElement: 布局元素属性定义</li>
+</ul>
+<h2 id="核心工作流程">核心工作流程</h2>
+<ol type="1">
+<li>Canvas更新流程:</li>
+</ol>
+<ul>
+<li>注册需要重建的组件到CanvasUpdateRegistry</li>
+<li>执行PerformUpdate处理重建请求</li>
+<li>调用Layout、Graphic重建流程</li>
+</ul>
+<ol start="2" type="1">
+<li>UI元素渲染流程:</li>
+</ol>
+<ul>
+<li>Graphic组件标记重建</li>
+<li>CanvasUpdateRegistry收集重建请求</li>
+<li>执行重建生成Mesh数据</li>
+<li>CanvasRenderer将Mesh提交到渲染管线</li>
+</ul>
+<ol start="3" type="1">
+<li>布局计算流程:</li>
+</ol>
+<ul>
+<li>自顶向下遍历布局树收集LayoutElement信息</li>
+<li>计算每个元素所需尺寸</li>
+<li>自底向上分配空间确定最终布局</li>
+</ul>
+<p>具体流程可以参考<a
+href="https://github.com/Unity-Technologies/uGUI">UGUI源码</a></p>
+<h1 id="hud设计与实现">HUD设计与实现</h1>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2024/11/07/%E7%90%86%E8%B4%A2/%E7%90%86%E8%B4%A2%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/" rel="next" title="理财基础知识">
+                  <i class="fa fa-chevron-left"></i> 理财基础知识
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2025/02/21/%E7%90%86%E8%B4%A2/%E5%9B%BD%E5%80%BA%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/" rel="prev" title="国债基础知识">
+                  国债基础知识 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#设计需求"><span class="nav-number">1.</span> <span class="nav-text">设计需求</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#ugui分析"><span class="nav-number">2.</span> <span class="nav-text">UGUI分析</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#canvas相关"><span class="nav-number">2.1.</span> <span class="nav-text">Canvas相关</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#基础组件"><span class="nav-number">2.2.</span> <span class="nav-text">基础组件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#交互组件"><span class="nav-number">2.3.</span> <span class="nav-text">交互组件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#布局系统"><span class="nav-number">2.4.</span> <span class="nav-text">布局系统</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#核心工作流程"><span class="nav-number">2.5.</span> <span class="nav-text">核心工作流程</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#hud设计与实现"><span class="nav-number">3.</span> <span class="nav-text">HUD设计与实现</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <img class="site-author-image" itemprop="image" alt="张卫"
+    src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">张卫</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">31</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/zw514159799" title="CSDN &amp;rarr; https:&#x2F;&#x2F;blog.csdn.net&#x2F;zw514159799" rel="noopener" target="_blank"><i class="fa fa-fw fa-csdn"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://github.com/Divad1111?tab=repositories" title="GitHub &amp;rarr; https:&#x2F;&#x2F;github.com&#x2F;Divad1111?tab&#x3D;repositories" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.cnblogs.com/qilezaitu" title="博客园 &amp;rarr; https:&#x2F;&#x2F;www.cnblogs.com&#x2F;qilezaitu" rel="noopener" target="_blank"><i class="fa fa-fw fa-cnblogs"></i>博客园</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://baidu.com/" title="https:&#x2F;&#x2F;baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://bing.com/" title="https:&#x2F;&#x2F;bing.com" rel="noopener" target="_blank">Bing</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2019 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">张卫</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-area-chart"></i>
+    </span>
+      <span class="post-meta-item-text">站点总字数：</span>
+    <span title="站点总字数">542k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">8:13</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.1
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.5.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
