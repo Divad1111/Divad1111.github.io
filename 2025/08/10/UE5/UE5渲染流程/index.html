@@ -58,7 +58,7 @@
 <meta property="og:description" content="本文档详细梳理了UE5的渲染流水线，从游戏线程（Game Thread）到渲染线程（Render Thread）再到RHI执行的全过程。每个模块首先说明设计目的和功能目标，然后介绍相关实现细节，并列出关键源码类、函数和文件。 游戏线程：渲染对象的组织 目标： 在游戏线程上管理和维护所有可渲染的物体（Primitive），并为它们创建在渲染线程上使用的代理（Scene Proxy）。游戏线程负责组件">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2025-08-10T01:43:10.000Z">
-<meta property="article:modified_time" content="2025-12-14T03:28:44.179Z">
+<meta property="article:modified_time" content="2026-05-05T13:36:33.215Z">
 <meta property="article:author" content="张卫">
 <meta property="article:tag" content="UE5">
 <meta name="twitter:card" content="summary">
@@ -222,7 +222,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2025-12-14 11:28:44" itemprop="dateModified" datetime="2025-12-14T11:28:44+08:00">2025-12-14</time>
+                <time title="修改时间：2026-05-05 21:36:33" itemprop="dateModified" datetime="2026-05-05T21:36:33+08:00">2026-05-05</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -279,6 +279,7 @@ FStaticMeshSceneProxy、FSkeletalMeshSceneProxy，对应头文件
 StaticMeshSceneProxy.h、SkeletalMeshSceneProxy.h）、FPrimitiveSceneInfo（位于渲染模块，源码在
 SceneRendering.cpp 或相关文件）和
 FScene（Scene.h/cpp）等是核心结构。</p>
+<a id="more"></a>
 <h1 id="游戏线程到渲染线程的通信">游戏线程到渲染线程的通信</h1>
 <p><strong>目标：</strong>
 将游戏线程上的渲染对象及其更新传递给渲染线程，并确保在多线程并行渲染下数据一致、安全。</p>
