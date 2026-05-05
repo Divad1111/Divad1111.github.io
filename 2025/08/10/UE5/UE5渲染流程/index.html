@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="本文档详细梳理了UE5的渲染流水线，从游戏线程（Game Thread）到渲染线程（Render Thread）再到RHI执行的全过程。每个模块首先说明设计目的和功能目标，然后介绍相关实现细节，并列出关键源码类、函数和文件。 游戏线程：渲染对象的组织 目标： 在游戏线程上管理和维护所有可渲染的物体（Primitive），并为它们创建在渲染线程上使用的代理（Scene Proxy）。游戏线程负责组件">
+<meta property="og:type" content="article">
+<meta property="og:title" content="UE5渲染流程">
+<meta property="og:url" content="http://yoursite.com/2025/08/10/UE5/UE5%E6%B8%B2%E6%9F%93%E6%B5%81%E7%A8%8B/index.html">
+<meta property="og:site_name" content="张卫的博客">
+<meta property="og:description" content="本文档详细梳理了UE5的渲染流水线，从游戏线程（Game Thread）到渲染线程（Render Thread）再到RHI执行的全过程。每个模块首先说明设计目的和功能目标，然后介绍相关实现细节，并列出关键源码类、函数和文件。 游戏线程：渲染对象的组织 目标： 在游戏线程上管理和维护所有可渲染的物体（Primitive），并为它们创建在渲染线程上使用的代理（Scene Proxy）。游戏线程负责组件">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-08-10T01:43:10.000Z">
+<meta property="article:modified_time" content="2025-12-14T03:28:44.179Z">
+<meta property="article:author" content="张卫">
+<meta property="article:tag" content="UE5">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://yoursite.com/2025/08/10/UE5/UE5%E6%B8%B2%E6%9F%93%E6%B5%81%E7%A8%8B/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>UE5渲染流程 | 张卫的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">张卫的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">Done is better than perfect</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2025/08/10/UE5/UE5%E6%B8%B2%E6%9F%93%E6%B5%81%E7%A8%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="张卫">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="张卫的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          UE5渲染流程
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2025-08-10 09:43:10" itemprop="dateCreated datePublished" datetime="2025-08-10T09:43:10+08:00">2025-08-10</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2025-12-14 11:28:44" itemprop="dateModified" datetime="2025-12-14T11:28:44+08:00">2025-12-14</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/UE5/" itemprop="url" rel="index">
+                    <span itemprop="name">UE5</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>本文档详细梳理了UE5的渲染流水线，从游戏线程（Game
+Thread）到渲染线程（Render
+Thread）再到RHI执行的全过程。每个模块首先说明设计目的和功能目标，然后介绍相关实现细节，并列出关键源码类、函数和文件。</p>
+<h1 id="游戏线程渲染对象的组织">游戏线程：渲染对象的组织</h1>
+<p><strong>目标：</strong>
+在游戏线程上管理和维护所有可渲染的物体（Primitive），并为它们创建在渲染线程上使用的代理（Scene
+Proxy）。游戏线程负责组件状态管理、场景注册以及将必要的数据拷贝到渲染线程可访问的线程安全结构中。</p>
+<p>在UE中，任何可渲染物体都是继承自 UPrimitiveComponent 的组件，比如
+<strong>UStaticMeshComponent、USkinnedMeshComponent、UInstancedStaticMeshComponent</strong>
+等。这些组件在被激活（Register）后，会调用其 CreateSceneProxy()
+方法创建一个对应的渲染线程代理。该代理的基类为
+<strong>FPrimitiveSceneProxy</strong>，它是游戏线程组件在渲染线程中的“镜像”表示。例如，UStaticMeshComponent::CreateSceneProxy()
+返回一个
+<strong>FStaticMeshSceneProxy</strong>（StaticMeshSceneProxy.h/cpp）实例；USkinnedMeshComponent::CreateSceneProxy()
+返回
+<strong>FSkeletalMeshSceneProxy</strong>。每个代理会将组件的几何数据、变换、材质相关信息等缓存在自身字段中，以便渲染线程使用。</p>
+<p>创建好的场景代理并不会立即进行渲染，而是被包装在<strong>FPrimitiveSceneInfo</strong>对象中，该对象封装了组件和其代理的状态，并由全局
+<strong>FScene</strong>（Scene.cpp）管理。FScene内部通常维护了一个加速结构（如八叉树）以进行视锥裁剪和碰撞检测。所有激活的可渲染组件在注册时会调用
+FScene::AddPrimitive()（位于 Scene.cpp），从而将对应的
+FPrimitiveSceneInfo
+加入场景。这样，渲染线程在后续帧中就能访问到这些代理和相关数据。简而言之，游戏线程负责定义游戏世界的几何和材质状态，通过
+FPrimitiveSceneProxy 和 FScene/FPrimitiveSceneInfo
+将其安全地传递给渲染线程。</p>
+<p><strong>关键类与文件：</strong>
+UPrimitiveComponent及其派生类（UStaticMeshComponent、USkinnedMeshComponent
+等）；它们的 CreateSceneProxy() 实现位于
+StaticMeshRender.cpp、SkinnedMeshComponent.cpp
+等文件中（见文档）。在渲染模块内，<strong>FPrimitiveSceneProxy</strong>（及其子类如
+FStaticMeshSceneProxy、FSkeletalMeshSceneProxy，对应头文件
+StaticMeshSceneProxy.h、SkeletalMeshSceneProxy.h）、FPrimitiveSceneInfo（位于渲染模块，源码在
+SceneRendering.cpp 或相关文件）和
+FScene（Scene.h/cpp）等是核心结构。</p>
+<h1 id="游戏线程到渲染线程的通信">游戏线程到渲染线程的通信</h1>
+<p><strong>目标：</strong>
+将游戏线程上的渲染对象及其更新传递给渲染线程，并确保在多线程并行渲染下数据一致、安全。</p>
+<p>由于游戏线程和渲染线程并行运行，游戏线程在更新可渲染组件状态（例如变换、材质参数修改等）后，不能直接修改渲染线程用到的内存，而应使用线程安全的机制将修改传递过去。Unreal提供了多种机制，其中核心的是<strong>渲染命令队列</strong>。游戏线程通常通过
+ENQUEUE_UNIQUE_RENDER_COMMAND
+等宏封装一个无参或带参的Lambda，并插入到渲染线程的命令队列中，渲染线程会在合适时机执行该命令。例如，当一个组件注册到场景时，游戏线程会创建
+FPrimitiveSceneProxy
+并通过渲染命令将其添加到<strong>FScene</strong>中。</p>
+<p>另一个常用机制是<strong>FRenderCommandFence</strong>。当游戏线程需要等待某些渲染线程的工作完成时，可调用
+FRenderCommandFence::BeginFence() 然后
+Wait()，直到渲染线程处理完毕。在资源初始化方面，诸如
+<strong>FRenderResource</strong>（顶点缓冲、纹理等）只能在渲染线程初始化，所以引擎提供了
+BeginInitResource() 等函数，在游戏线程上排队一个命令到渲染线程上执行其
+InitResource()。</p>
+<p>在渲染对象提交方面，当游戏线程调用
+UPrimitiveComponent::RegisterComponent() 时，内部会生成对应的
+FPrimitiveSceneProxy 并立即通过渲染命令将其附加到 FScene
+中。之后每帧只要该代理可见，渲染线程就会调用其 DrawDynamicElements()
+等方法进行渲染。</p>
+<p><strong>关键类与函数：</strong> ENQUEUE_UNIQUE_RENDER_COMMAND_XXX
+宏实现（见引擎头文件
+RenderCommandFence.h/RHICommandList.h）；FRenderCommandFence（头
+RenderCommandFence.h）。组件注册触发的
+UActorComponent::RegisterComponent（ActorComponent.cpp）最终调用渲染线程相关代码。资源初始化通过
+BeginInitResource()（RenderResource.h）调用。</p>
+<h1 id="渲染线程接收与组织渲染对象">渲染线程：接收与组织渲染对象</h1>
+<p><strong>目标：</strong>
+在渲染线程上遍历场景，计算每个代理在当前视图（<strong>FSceneView</strong>）中的可见性与渲染相关性，并生成最终的绘制命令。</p>
+<p>渲染线程在每帧开始时会创建一个<strong>FSceneRenderer</strong>实例（在
+SceneRendering.cpp 中实现，如 FDeferredShadingSceneRenderer
+等子类），用于对一个或多个视口（View）进行渲染。每个
+FSceneView（SceneView.h/cpp）代表一次视点，比如主摄像机视图或分屏的副摄像机。对应的内部表示是<strong>FViewInfo</strong>，包含渲染期间需要的临时数据。</p>
+<p>渲染流程大致如下：首先调用
+FSceneRenderer::InitViews()，该函数为每个视点构建视锥和相关信息；然后迭代场景中的所有<strong>FPrimitiveSceneInfo</strong>，调用每个代理的
+GetViewRelevance(const FSceneView*)
+方法，生成一个<strong>FPrimitiveViewRelevance</strong>对象。FPrimitiveViewRelevance
+描述了该代理对当前视图的可见性和哪些渲染通道相关（例如它是否可绘制在基本通道、深度通道、阴影通道，是否会投射阴影等）。如果
+bDrawRelevance 为真且 bStaticRelevance
+为真，则引擎将该代理标记为静态可绘制对象，并调用其 DrawStaticElements()
+方法（只在代理添加到场景时调用一次）；如果 bDynamicRelevance
+为真，则每帧都会调用其 DrawDynamicElements()
+来生成动态网格批（如粒子、动画骨骼网格等）。这两个方法分别会生成若干<strong>FMeshBatch</strong>，代表最终要绘制的网格元素。</p>
+<ul>
+<li><p><strong>静态网格批（Cached Mesh Batches）：</strong>
+对于不随帧更新的部分（如静态网格几何），代理在注册时在
+DrawStaticElements() 中创建并缓存 FMeshBatch（通常存放在
+FPrimitiveSceneInfo::StaticMeshes
+中）。这些静态批只在代理添加或属性变化时构建一次，后续每帧直接重用。</p></li>
+<li><p><strong>动态网格批（Dynamic Mesh Batches）：</strong>
+对于需要每帧更新的部分（如动画网格、粒子系统等），代理在每帧的 InitViews
+阶段会执行 GetDynamicMeshElements() 方法，重新生成 FMeshBatch 并暂存到
+FSceneRenderer::MeshElementCollector
+中。这些批无需缓存，每帧重建。</p></li>
+</ul>
+<p>上述批处理完成后，渲染线程会根据当前视锥和遮挡情况进行剔除，只保留可见的网格元素。这一过程通常在
+FSceneRenderer::UpdatePrimitiveSceneInfo() 或
+FSceneRenderer::ComputeViewVisibility() 中完成。此外，代理的
+Bounds（包围盒）也用于遮挡剔除。最终，每个 FMeshBatch 连同其
+FPrimitiveViewRelevance 信息被分别分配到各个渲染通道（如深度通道
+BasePass、深度预通道 DepthPass、阴影通道
+ShadowPass、透明通道等）的渲染列表中。</p>
+<p><strong>关键类与数据结构：</strong>
+FSceneRenderer（SceneRendering.cpp，对应每帧渲染器）、FViewInfo（SceneView.h/cpp，包含每帧渲染信息）、FPrimitiveSceneProxy（代理类）和
+FPrimitiveViewRelevance（判断代理相关性）。每个代理的
+GetViewRelevance、DrawDynamicElements、DrawStaticElements 等函数（如
+FStaticMeshSceneProxy::DrawStaticElements 在 StaticMeshSceneProxy.cpp
+中）在渲染线程中被调用。渲染通道的实现如
+BasePassRendering.cpp、DepthPassRendering.cpp
+等文件，分别处理各自通道的绘制。</p>
+<h1 id="渲染对象排序与通道划分">渲染对象排序与通道划分</h1>
+<p><strong>目标：</strong>
+优化绘制顺序，减少状态切换和过度绘制，并将网格按渲染通道（Render
+Pass）分类以分阶段绘制。</p>
+<p>Unreal将渲染流水线分为多个通道（如深度通道 DepthPrePass、基础通道
+BasePass、阴影通道 ShadowPass、透明通道 Translucency
+等），以便分别处理不同目的的绘制。在渲染器中，这些通道的调用顺序是静态定义的。例如，为了填充层次Z（Hi-Z）以加速后续渲染，DepthPass
+通常在 BasePass 之前执行。此外，所有静态网格元素（来自
+FPrimitiveSceneInfo::StaticMeshes）会先构建一个静态绘制列表（Static Mesh
+Draw
+List），并根据需要进行排序。这种排序通常基于几何与材质，以减少管线状态切换：比如按材质ID、顶点工厂类型甚至距离相机等做匹配/排序（类似
+Matches/Compare 机制）。可见元素生成后，渲染线程会使用诸如
+SortBasePassStaticPrimitives之类的函数来排序静态网格列表，以实现前向或后向排序（视具体情况而定），减小像素填充开销。</p>
+<p>对于动态网格，它们通常无法大量合并或缓存，因此动态批尽量保持原始顺序，除非特殊优化（比如
+GPU 进行硬件排序）。渲染线程在各通道中遍历相应列表时，会逐个将
+FMeshDrawCommand
+提交到管线。所示，渲染顺序设计为先Depth再Base，以满足Hi-Z等优化。透明通道会在所有不透明物体之后执行，以正确混合半透明内容。</p>
+<p><strong>关键流程与函数：</strong> 在 BasePassRendering.cpp 中的函数如
+GatherBasePassMeshDrawCommands
+会收集并排序基础通道的静态和动态网格，并生成绘制命令。排序函数如
+SortFrontToBack、SortBasePassStaticPrimitives（源码中类似静态绘制列表的排序机制）将网格按优先级和材质状态排序。状态排序相关的比较函数位于各类
+FMeshPassProcessor 和 FMeshDrawCommandSortKey 等代码中。</p>
+<h1 id="渲染命令的组织与封装">渲染命令的组织与封装</h1>
+<p><strong>目标：</strong>
+将每个网格渲染需求转换为最终提交给低层RHI（渲染硬件接口）的绘制命令，并尽可能缓存和合并，以提升渲染效率。</p>
+<p>渲染线程生成的
+FMeshBatch（包含顶点缓冲、索引缓冲、材质代理等）还不能直接交给GPU绘制。引擎接着使用<strong>网格通道处理器（Mesh
+Pass
+Processor）</strong>将它们转换为具体的绘制命令。每个渲染通道都有对应的
+FMeshPassProcessor（如 FBasePassMeshProcessor），其 AddMeshBatch()
+函数会根据当前材质、渲染状态等，决定如何生成<strong>FMeshDrawCommand</strong>。FMeshDrawCommand
+是一个结构化的数据包，包含了绘制调用所需的一切信息：所用的着色器、顶点/索引缓冲绑定、常量缓冲绑定、绘制参数（基顶点、索引个数、实例数等）以及一个管线状态ID
+(FGraphicsMinimalPipelineStateId)。FMeshDrawCommand
+完全位于渲染线程上下文，它是无状态（stateless）的，只依赖其字段来描述一次绘制调用。</p>
+<p>引入 FMeshDrawCommand
+允许引擎在RHI层之前进行缓存和合并：多个相同状态的命令可以合并以减少调用次数。<strong>静态绘制命令</strong>会存储在场景中，例如
+FScene::CachedDrawLists[EMeshPass::BasePass] 的 MeshDrawCommands
+列表中；<strong>动态绘制命令</strong>因为会根据视角变化，每帧生成，它们则通常存储在视图
+(FViewInfo)
+中的并行绘制列表中（FViewInfo::ParallelMeshDrawCommandPasses）。静态命令构建时机是代理加入场景的时刻，而动态命令构建发生在每帧的视图可见性计算阶段。</p>
+<p>完成绘制命令生成后，渲染线程会调用诸如 SubmitMeshDrawCommands()
+的函数，将每个<strong>FMeshDrawCommand</strong>转换为实际的 RHI
+绘制调用，将其记录到一个 RHI
+命令列表（FRHICommandList）中。此时还会创建或引用合适的管线状态对象（Graphics
+Pipeline State），并设置好对应的着色器和资源绑定。最终，每个
+FMeshDrawCommand 通过调用其方法（如 SubmitDraw() 在 MeshDrawCommand.cpp
+中）分解为若干 RHI 命令（例如绑定顶点缓冲、绑定管线状态、调用
+RHIDrawIndexedPrimitive 等）。</p>
+<p><strong>关键类与文件：</strong> FMeshBatch（几何+材质等数据，定义在
+MeshBatch.h），FMeshPassProcessor 及其派生类（如 FBasePassMeshProcessor
+在 BasePassRendering.cpp），FMeshDrawCommand（定义在
+MeshDrawCommand.h/cpp）和 FMeshDrawCommandStorage。管线状态ID类如
+FGraphicsMinimalPipelineStateId（GraphicsPipelineState.h）用于缓存和查找PSO。RHI命令封装涉及
+FRHICommandListImmediate（头 RHICommandList.h）和执行器
+FRHICommandListExecutor（RHICommandList.cpp）。</p>
+<h1
+id="渲染线程向rhi线程和gpu提交命令">渲染线程向RHI线程和GPU提交命令</h1>
+<p><strong>目标：</strong>
+将构建好的命令列表提交到底层渲染硬件接口（RHI）并最终交由GPU执行。</p>
+<p>在渲染线程上，当所有渲染通道的 FMeshDrawCommand 都被记录到一个或多个
+FRHICommandListImmediate（或其他命令列表）之后，便会调用
+FRHICommandListExecutor::Submit()
+将这些命令列表提交给RHI线程。RHI线程（对于支持显式命令队列的RHI，例如DX12/Metal）会最终调用底层API将命令调度给GPU。无论是否启用RHI并行，FRHICommandListImmediate
+都封装了实际的渲染调用。</p>
+<p>通常，提交过程在 FSceneRenderer::RenderFinish(RHICmdList)
+之类的调用中完成。在编辑器中，游戏线程也可能使用
+FlushRenderingCommands()
+等函数等待渲染线程完成任务。最终，GPU驱动接收到渲染命令后，在GPU上执行绘制。此过程涉及如
+RHISubmitCommandLists() 等底层调用（具体在每个平台的RHI实现中）。</p>
+<p><strong>关键类与文件：</strong> FRHICommandListImmediate 和
+FRHICommandListExecutor（位于RHI模块，头文件 RHICommandList.h 和实现
+RHICommandList.cpp），FRHIGraphicsPipelineState
+等。实际上，这一步主要在引擎的渲染模块未提供源代码（私有），而是在各平台RHI代码中处理。开发者可在
+RenderDependencyGraph
+等现代接口中看到更多细节，但在传统渲染器中通常直接提交并调用硬件API。</p>
+<h1 id="特殊渲染路径和机制">特殊渲染路径和机制</h1>
+<h2 id="静态网格和骨骼网格">静态网格和骨骼网格</h2>
+<p>常规的 静态网格
+采用上述描述的基础通道流程，无特殊处理。骨骼网格（USkeletalMeshComponent），其代理类
+FSkeletalMeshSceneProxy（SkeletalMeshSceneProxy.h/cpp）在渲染线程需处理骨骼动画计算结果。这包括从
+CPU 端的骨骼姿势获取顶点变换并填充顶点着色器常量缓冲（或使用 GPU
+骨骼变形时），然后按每个LOD和蒙皮权重生成对应的
+FMeshBatch。骨骼网格在可见时也会分别调用
+DrawStaticElements（针对其不随动画改变的部分）或
+DrawDynamicElements（实时动画部分）。其间，FSkinnedMeshObject（SkinnedMeshObject.h/cpp）负责高效的顶点骨骼更新。重要的是，骨骼网格渲染代理在
+GetViewRelevance() 中会为不同特性（是否描边、是否透明等）填充
+FPrimitiveViewRelevance，从而决定走哪个通道。</p>
+<h2 id="nanite-渲染">Nanite 渲染</h2>
+<p>Nanite
+是UE5中为超高多边形场景设计的虚拟化几何系统。其核心是预处理和聚合静态网格：在导入时，静态网格被拆分为多级层次的簇（Cluster）（一系列连续三角形）。渲染时，Nanite运行在独立的渲染通道中——一个自定义管线，不通过传统的
+MeshDrawCall。它根据相机距离动态决定每个簇的详细程度，并仅流式加载可见数据。每帧，GPU在专用着色器中执行簇剔除和细节选择：只将满足细节阈值的簇发往光栅化。这意味着对开发者而言，开启Nanite后无需关心LOD，细节自动调整。支持Nanite的网格需要启用该功能，且通常对物体实例数量和动态变形有一定限制（如仅支持有限的世界位移和刚体变换，不支持蒙皮变形）。关键实现位于
+NaniteSceneProxy.cpp、NaniteResources.cpp 等文件，其中 NaniteSceneProxy
+会在场景中注册 Nanite
+网格，并在渲染时生成Nanite管线的绘制命令（详见引擎源码）。</p>
+<p><strong>参考：</strong>
+UE官方文档总结道“在渲染时，簇会根据视角动态切换不同细节级别，并无缝拼接相邻簇，没有缝隙；数据按需流入内存，Nanite运行在自己的渲染通道，完全绕过传统绘制调用”。</p>
+<h2 id="lumen-光照路径">Lumen 光照路径</h2>
+<p>Lumen
+是UE5的全局光照（GI）和反射系统，主要依赖于软件光线追踪和多种加速结构。其重要特点是<strong>表面缓存（Surface
+Cache）</strong>机制：引擎为场景中的网格预计算若干个采样点（称为“卡片”），在这些位置捕获网格的材质属性和法线。这些卡片数据存储在
+Surface Cache
+中，用于快速查询间接光照。当渲染时，Lumen首先尝试在屏幕空间做快速追踪（Screen
+Tracing），如果找不到有效光照则使用全局方法（如对动态物体也支持的 Signed
+Distance Field 软件光线追踪，或者在支持硬件光线追踪的情况下使用GPU
+RTX）。Surface Cache
+使得对静态场景的间接光照计算可以跨帧摊销：每帧只更新少量卡片，使系统可支持多灯光和多次反弹。Nanite可以加速Surface
+Cache的生成和更新，使高精度网格渲染更加高效。整体上，Lumen的追踪结构和光照缓存让动态光照具有良好的表现力，代价是较为复杂的系统实现（对应源码文件如
+LumenSurfaceCache.h/cpp、LumenTracingData.h/cpp 等实现细节）。</p>
+<p><strong>参考：</strong>
+官方文档指出Lumen会“对邻近场景表面生成自动参数化（Surface
+Cache），用于在光线击中时快速查找照明；对于未命中的情况，首先进行屏幕空间光线追踪，然后使用有向距离场（SDF）进行软件追踪，或在硬件RT时使用硬件追踪”。文档并提到“Lumen
+用软件光追对SDF（Signed Distance
+Field）执行全局光照和反射”，以及Nanite可加速表面缓存捕获。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/UE5/" rel="tag"><i class="fa fa-tag"></i> UE5</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2025/07/21/Unity/Optimization/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96-GPU/" rel="next" title="性能优化-GPU">
+                  <i class="fa fa-chevron-left"></i> 性能优化-GPU
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2026/05/05/%E7%90%86%E8%B4%A2/%E7%BB%8F%E6%B5%8E%E5%AD%A6%E5%8E%9F%E7%90%86/" rel="prev" title="理财/经济学原理">
+                  理财/经济学原理 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#游戏线程渲染对象的组织"><span class="nav-number">1.</span> <span class="nav-text">游戏线程：渲染对象的组织</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#游戏线程到渲染线程的通信"><span class="nav-number">2.</span> <span class="nav-text">游戏线程到渲染线程的通信</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#渲染线程接收与组织渲染对象"><span class="nav-number">3.</span> <span class="nav-text">渲染线程：接收与组织渲染对象</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#渲染对象排序与通道划分"><span class="nav-number">4.</span> <span class="nav-text">渲染对象排序与通道划分</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#渲染命令的组织与封装"><span class="nav-number">5.</span> <span class="nav-text">渲染命令的组织与封装</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#渲染线程向rhi线程和gpu提交命令"><span class="nav-number">6.</span> <span class="nav-text">渲染线程向RHI线程和GPU提交命令</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#特殊渲染路径和机制"><span class="nav-number">7.</span> <span class="nav-text">特殊渲染路径和机制</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#静态网格和骨骼网格"><span class="nav-number">7.1.</span> <span class="nav-text">静态网格和骨骼网格</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#nanite-渲染"><span class="nav-number">7.2.</span> <span class="nav-text">Nanite 渲染</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#lumen-光照路径"><span class="nav-number">7.3.</span> <span class="nav-text">Lumen 光照路径</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <img class="site-author-image" itemprop="image" alt="张卫"
+    src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">张卫</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">33</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/zw514159799" title="CSDN &amp;rarr; https:&#x2F;&#x2F;blog.csdn.net&#x2F;zw514159799" rel="noopener" target="_blank"><i class="fa fa-fw fa-csdn"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://github.com/Divad1111?tab=repositories" title="GitHub &amp;rarr; https:&#x2F;&#x2F;github.com&#x2F;Divad1111?tab&#x3D;repositories" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.cnblogs.com/qilezaitu" title="博客园 &amp;rarr; https:&#x2F;&#x2F;www.cnblogs.com&#x2F;qilezaitu" rel="noopener" target="_blank"><i class="fa fa-fw fa-cnblogs"></i>博客园</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://baidu.com/" title="https:&#x2F;&#x2F;baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://bing.com/" title="https:&#x2F;&#x2F;bing.com" rel="noopener" target="_blank">Bing</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2019 – 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">张卫</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-area-chart"></i>
+    </span>
+      <span class="post-meta-item-text">站点总字数：</span>
+    <span title="站点总字数">553k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">8:23</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.1
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.5.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
